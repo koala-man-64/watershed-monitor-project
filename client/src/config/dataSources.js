@@ -15,7 +15,7 @@ export const DEFAULT_DATA_REVALIDATE_AFTER_MS = parsePositiveInt(
 );
 
 export const DATA_BLOBS = Object.freeze({
-  main: env.REACT_APP_PRIMARY_DATA_BLOB || "NWMIWS_Site_Data_testing_varied.csv",
+  main: env.REACT_APP_PRIMARY_DATA_BLOB || "NWMIWS_Site_Data.csv",
   info: env.REACT_APP_INFO_DATA_BLOB || "info.csv",
   locations: env.REACT_APP_LOCATIONS_DATA_BLOB || "locations.csv",
 });

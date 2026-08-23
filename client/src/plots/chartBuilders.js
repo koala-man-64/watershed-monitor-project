@@ -11,22 +11,6 @@ const DEFAULT_COLORS = [
 const round3 = (value) =>
   Number.isFinite(value) ? Math.round(value * 1000) / 1000 : value;
 
-function quantile(values, percentile) {
-  if (!values || values.length === 0) {
-    return Number.NaN;
-  }
-
-  const position = (values.length - 1) * percentile;
-  const base = Math.floor(position);
-  const remainder = position - base;
-
-  if (values[base + 1] !== undefined) {
-    return values[base] + remainder * (values[base + 1] - values[base]);
-  }
-
-  return values[base];
-}
-
 function wrapLabel(label, maxChars = 12) {
   if (!label) {
     return label;
@@ -146,7 +130,8 @@ export function buildTrendChart(rawData, cfg, palette = defaultColors) {
   ).sort((left, right) => +left - +right);
 
   const labels = [];
-  const boxData = [];
+  const avgs = [];
+  const band = [];
   const counts = [];
 
   sortedYears.forEach((year) => {
@@ -155,11 +140,7 @@ export function buildTrendChart(rawData, cfg, palette = defaultColors) {
       return;
     }
 
-    const sorted = averages.slice().sort((left, right) => left - right);
     const meanAvg = averages.reduce((sum, value) => sum + value, 0) / averages.length;
-    const q1 = quantile(sorted, 0.25);
-    const median = quantile(sorted, 0.5);
-    const q3 = quantile(sorted, 0.75);
 
     const minValues = groupMins[year] || [];
     const maxValues = groupMaxs[year] || [];
@@ -167,27 +148,22 @@ export function buildTrendChart(rawData, cfg, palette = defaultColors) {
     const maxVal = maxValues.length ? Math.max(...maxValues) : meanAvg;
 
     labels.push(year);
-    boxData.push({
-      min: round3(minVal),
-      q1: round3(q1),
-      median: round3(median),
-      q3: round3(q3),
-      max: round3(maxVal),
-      mean: round3(meanAvg),
-    });
+    avgs.push(round3(meanAvg));
+    band.push({ min: round3(minVal), max: round3(maxVal) });
     counts.push(countByYear[year] || 0);
   });
 
   return {
     title: site ? `${parameter} Trend for ${site}` : "Trend",
     subtitle: parameter ? `${parameter} by year` : "",
-    type: "boxplot",
+    type: "d3line",
     data: {
       labels,
       datasets: [
         {
           label: parameter,
-          data: boxData,
+          data: avgs,
+          band,
           backgroundColor: palette[0],
           borderColor: palette[0],
           customCounts: counts,
@@ -231,7 +207,7 @@ export function buildComparisonChart(rawData, cfg, palette = defaultColors) {
     subtitle: `Selected lakes (n): ${new Set(selectedSites).size}`,
     type: "d3bar",
     data: {
-      labels: sites.map((site) => wrapLabel(site, 12)),
+      labels: sites.map((site) => wrapLabel(site, 10)),
       datasets: [
         {
           label: parameter,

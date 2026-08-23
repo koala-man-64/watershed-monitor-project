@@ -144,3 +144,26 @@ test("updating plot 1 stores a normalized trend config", () => {
   });
   expect(plotConfigs[1]).toBeNull();
 });
+
+test("the demonstration notice is visible on the welcome view and the plots view", () => {
+  render(<App />);
+
+  expect(screen.getByRole("note")).toHaveTextContent(
+    /all values shown are simulated and are not real measurements/i
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+  expect(screen.getByText(/plots view/i)).toBeInTheDocument();
+  expect(screen.getByRole("note")).toHaveTextContent(
+    /all values shown are simulated and are not real measurements/i
+  );
+});
+
+test("the welcome page no longer publishes an individual contact", () => {
+  render(<App />);
+
+  expect(screen.queryByText(/john ransom/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/benziecd\.org/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/231-882-4391/i)).not.toBeInTheDocument();
+});

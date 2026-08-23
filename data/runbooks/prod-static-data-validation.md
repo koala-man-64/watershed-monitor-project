@@ -28,7 +28,7 @@ python scripts/validate_static_data.py --base-url https://<app>.azurestaticapps.
 
 ## What the script verifies
 
-1. For every configured site, `GET /data/NWMIWS_Site_Data_testing_varied.csv` returns `200`.
+1. For every configured site, `GET /data/NWMIWS_Site_Data.csv` returns `200`.
 2. For every configured site, `GET /data/info.csv` returns `200`.
 3. For every configured site, `GET /data/locations.csv` returns `200`.
 4. All three responses include `Content-Type: text/csv`.
