@@ -40,8 +40,16 @@ function D3Line({
   yDomain,
   width,
   height,
+  xLabel,
+  yLabel,
 }) {
   const [hover, setHover] = useState(null);
+  const margin = {
+    top: 20,
+    right: 14,
+    bottom: 34 + (xLabel ? 20 * chartFontScale : 0),
+    left: 54 + (yLabel ? 20 * chartFontScale : 0),
+  };
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
@@ -58,9 +66,11 @@ function D3Line({
           counts={counts}
           color={color}
           yDomain={yDomain}
-          margin={{ top: 20, right: 14, bottom: 34, left: 54 }}
+          margin={margin}
           width={width}
           height={height}
+          xLabel={xLabel}
+          yLabel={yLabel}
           onHover={(event, index, stats, label) => {
             setHover({
               x: event.clientX,
@@ -157,6 +167,8 @@ D3Line.propTypes = {
   }),
   width: PropTypes.number.isRequired,
   height: PropTypes.number.isRequired,
+  xLabel: PropTypes.string,
+  yLabel: PropTypes.string,
 };
 
 D3Line.defaultProps = {
@@ -164,15 +176,32 @@ D3Line.defaultProps = {
   counts: [],
   color: "#37474f",
   yDomain: undefined,
+  xLabel: "",
+  yLabel: "",
 };
 
 
-function D3Bar({ labels, values, counts = [], color = "#37474f", yDomain, width, height }) {
+function D3Bar({
+  labels,
+  values,
+  counts = [],
+  color = "#37474f",
+  yDomain,
+  width,
+  height,
+  xLabel,
+  yLabel,
+}) {
   const maxLabelLines = Math.min(
     3,
     Math.max(1, ...labels.map((label) => (Array.isArray(label) ? label.length : 1)))
   );
-  const margin = { top: 16, right: 12, bottom: 26 + maxLabelLines * 14, left: 52 };
+  const margin = {
+    top: 16,
+    right: 12,
+    bottom: 26 + maxLabelLines * 14 + (xLabel ? 20 * chartFontScale : 0),
+    left: 52 + (yLabel ? 20 * chartFontScale : 0),
+  };
   const [hover, setHover] = useState(null);
 
   return (
@@ -192,6 +221,8 @@ function D3Bar({ labels, values, counts = [], color = "#37474f", yDomain, width,
           margin={margin}
           width={width}
           height={height}
+          xLabel={xLabel}
+          yLabel={yLabel}
           onHover={(event, _, value, label) => {
             setHover({
               x: event.clientX,
@@ -265,12 +296,70 @@ D3Bar.propTypes = {
   }),
   width: PropTypes.number.isRequired,
   height: PropTypes.number.isRequired,
+  xLabel: PropTypes.string,
+  yLabel: PropTypes.string,
 };
 
 D3Bar.defaultProps = {
   counts: [],
   color: "#37474f",
   yDomain: undefined,
+  xLabel: "",
+  yLabel: "",
+};
+
+function AxisTitles({ xLabel, yLabel, innerW, innerH, margin }) {
+  const titleStyle = { pointerEvents: "none", userSelect: "none" };
+
+  return (
+    <>
+      {xLabel ? (
+        <text
+          x={innerW / 2}
+          y={innerH + margin.bottom - 6}
+          textAnchor="middle"
+          fontSize={13 * chartFontScale}
+          fontWeight="600"
+          fill="#37474f"
+          fontFamily={chartFontFamily}
+          style={titleStyle}
+        >
+          {xLabel}
+        </text>
+      ) : null}
+      {yLabel ? (
+        <text
+          transform="rotate(-90)"
+          x={-innerH / 2}
+          y={-margin.left + 14}
+          textAnchor="middle"
+          fontSize={13 * chartFontScale}
+          fontWeight="600"
+          fill="#37474f"
+          fontFamily={chartFontFamily}
+          style={titleStyle}
+        >
+          {yLabel}
+        </text>
+      ) : null}
+    </>
+  );
+}
+
+AxisTitles.propTypes = {
+  xLabel: PropTypes.string,
+  yLabel: PropTypes.string,
+  innerW: PropTypes.number.isRequired,
+  innerH: PropTypes.number.isRequired,
+  margin: PropTypes.shape({
+    bottom: PropTypes.number.isRequired,
+    left: PropTypes.number.isRequired,
+  }).isRequired,
+};
+
+AxisTitles.defaultProps = {
+  xLabel: "",
+  yLabel: "",
 };
 
 function D3BarInner({
@@ -282,6 +371,8 @@ function D3BarInner({
   margin,
   width,
   height,
+  xLabel,
+  yLabel,
   onHover,
   onLeave,
 }) {
@@ -299,6 +390,13 @@ function D3BarInner({
 
   return (
     <g transform={`translate(${margin.left},${margin.top})`}>
+      <AxisTitles
+        xLabel={xLabel}
+        yLabel={yLabel}
+        innerW={innerW}
+        innerH={innerH}
+        margin={margin}
+      />
       {ticks.map((tick) => {
         const py = y(tick);
         return (
@@ -410,6 +508,8 @@ D3BarInner.propTypes = {
   }).isRequired,
   width: PropTypes.number.isRequired,
   height: PropTypes.number.isRequired,
+  xLabel: PropTypes.string,
+  yLabel: PropTypes.string,
   onHover: PropTypes.func,
   onLeave: PropTypes.func,
 };
@@ -417,6 +517,8 @@ D3BarInner.propTypes = {
 D3BarInner.defaultProps = {
   counts: [],
   yDomain: undefined,
+  xLabel: "",
+  yLabel: "",
   onHover: undefined,
   onLeave: undefined,
 };
@@ -431,6 +533,8 @@ function D3LineInner({
   margin,
   width,
   height,
+  xLabel,
+  yLabel,
   onHover,
   onLeave,
 }) {
@@ -478,6 +582,13 @@ function D3LineInner({
 
   return (
     <g transform={`translate(${margin.left},${margin.top})`}>
+      <AxisTitles
+        xLabel={xLabel}
+        yLabel={yLabel}
+        innerW={innerW}
+        innerH={innerH}
+        margin={margin}
+      />
       {ticks.map((tick) => (
         <g key={`tick-${tick}`} transform={`translate(0,${y(tick)})`} shapeRendering="crispEdges">
           <line x1={0} x2={innerW} stroke="#e5e7eb" strokeWidth={0.75} />
@@ -595,6 +706,8 @@ D3LineInner.propTypes = {
   }).isRequired,
   width: PropTypes.number.isRequired,
   height: PropTypes.number.isRequired,
+  xLabel: PropTypes.string,
+  yLabel: PropTypes.string,
   onHover: PropTypes.func,
   onLeave: PropTypes.func,
 };
@@ -603,6 +716,8 @@ D3LineInner.defaultProps = {
   band: [],
   counts: [],
   yDomain: undefined,
+  xLabel: "",
+  yLabel: "",
   onHover: undefined,
   onLeave: undefined,
 };
@@ -917,6 +1032,8 @@ function ChartPanel({ chartObj, cfg, slotLabel, notice, onDownload, nav }) {
             yDomain={yDomain}
             width={plotWidth}
             height={plotHeight}
+            xLabel={chartObj.xAxisLabel || ""}
+            yLabel={chartObj.yAxisLabel || ""}
           />
         ) : chartObj.type === "d3bar" ? (
           <D3Bar
@@ -928,6 +1045,8 @@ function ChartPanel({ chartObj, cfg, slotLabel, notice, onDownload, nav }) {
             yDomain={d3BarDomain}
             width={plotWidth}
             height={plotHeight}
+            xLabel={chartObj.xAxisLabel || ""}
+            yLabel={chartObj.yAxisLabel || ""}
           />
         ) : (
           <ReactChart

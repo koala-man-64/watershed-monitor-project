@@ -157,6 +157,8 @@ export function buildTrendChart(rawData, cfg, palette = defaultColors) {
     title: site ? `${parameter} Trend for ${site}` : "Trend",
     subtitle: parameter ? `${parameter} by year` : "",
     type: "d3line",
+    xAxisLabel: "Year",
+    yAxisLabel: parameter || "",
     data: {
       labels,
       datasets: [
@@ -206,6 +208,8 @@ export function buildComparisonChart(rawData, cfg, palette = defaultColors) {
     title: `${parameter} Comparison by Site`,
     subtitle: `Selected lakes (n): ${new Set(selectedSites).size}`,
     type: "d3bar",
+    xAxisLabel: "Site",
+    yAxisLabel: parameter || "",
     data: {
       labels: sites.map((site) => wrapLabel(site, 10)),
       datasets: [
