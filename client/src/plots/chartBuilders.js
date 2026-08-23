@@ -42,6 +42,14 @@ function wrapLabel(label, maxChars = 12) {
 
 export const defaultColors = DEFAULT_COLORS;
 
+export function formatParameterAxisLabel(parameter, unit) {
+  if (!parameter) {
+    return "";
+  }
+
+  return unit ? `${parameter} (${unit})` : parameter;
+}
+
 export function getTrendSite(cfg = {}) {
   const selectedSites = Array.isArray(cfg.selectedSites) ? cfg.selectedSites : [];
   if (selectedSites.length === 0) {
@@ -90,7 +98,7 @@ export function filterRowsForConfig(rawData = [], cfg = {}) {
   });
 }
 
-export function buildTrendChart(rawData, cfg, palette = defaultColors) {
+export function buildTrendChart(rawData, cfg, palette = defaultColors, unit = "") {
   const parameter = cfg?.parameter;
   const site = getTrendSite(cfg);
   const filtered = filterRowsForConfig(rawData, { ...cfg, chartType: "trend" });
@@ -158,7 +166,7 @@ export function buildTrendChart(rawData, cfg, palette = defaultColors) {
     subtitle: parameter ? `${parameter} by year` : "",
     type: "d3line",
     xAxisLabel: "Year",
-    yAxisLabel: parameter || "",
+    yAxisLabel: formatParameterAxisLabel(parameter, unit),
     data: {
       labels,
       datasets: [
@@ -175,7 +183,7 @@ export function buildTrendChart(rawData, cfg, palette = defaultColors) {
   };
 }
 
-export function buildComparisonChart(rawData, cfg, palette = defaultColors) {
+export function buildComparisonChart(rawData, cfg, palette = defaultColors, unit = "") {
   const parameter = cfg?.parameter;
   const selectedSites = Array.isArray(cfg?.selectedSites) ? cfg.selectedSites : [];
   const filtered = filterRowsForConfig(rawData, { ...cfg, chartType: "comparison" });
@@ -209,7 +217,7 @@ export function buildComparisonChart(rawData, cfg, palette = defaultColors) {
     subtitle: `Selected lakes (n): ${new Set(selectedSites).size}`,
     type: "d3bar",
     xAxisLabel: "Site",
-    yAxisLabel: parameter || "",
+    yAxisLabel: formatParameterAxisLabel(parameter, unit),
     data: {
       labels: sites.map((site) => wrapLabel(site, 10)),
       datasets: [

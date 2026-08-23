@@ -9,28 +9,41 @@ import {
 import { downloadPlotData } from "./plots/download";
 import { cycleTrendSite } from "./plots/plotConfigs";
 
-function buildChartForConfig(rawData, cfg) {
+function getParameterUnit(infoData, cfg) {
+  const entry = cfg?.parameter && infoData ? infoData[cfg.parameter] : null;
+  return entry?.Unit ? String(entry.Unit).trim() : "";
+}
+
+function buildChartForConfig(rawData, cfg, unit) {
   if (!cfg) {
     return null;
   }
 
   return cfg.chartType === "trend"
-    ? buildTrendChart(rawData, cfg, defaultColors)
-    : buildComparisonChart(rawData, cfg, defaultColors);
+    ? buildTrendChart(rawData, cfg, defaultColors, unit)
+    : buildComparisonChart(rawData, cfg, defaultColors, unit);
 }
 
-function Plots({ plotConfigs = [], setPlotConfigs, rawData = [], loading = false }) {
+function Plots({
+  plotConfigs = [],
+  setPlotConfigs,
+  rawData = [],
+  infoData = {},
+  loading = false,
+}) {
   const cfg1 = plotConfigs[0] || null;
   const cfg2 = plotConfigs[1] || null;
   const normalizedData = Array.isArray(rawData) ? rawData : [];
+  const unit1 = getParameterUnit(infoData, cfg1);
+  const unit2 = getParameterUnit(infoData, cfg2);
 
   const chart1 = useMemo(
-    () => buildChartForConfig(normalizedData, cfg1),
-    [normalizedData, cfg1]
+    () => buildChartForConfig(normalizedData, cfg1, unit1),
+    [normalizedData, cfg1, unit1]
   );
   const chart2 = useMemo(
-    () => buildChartForConfig(normalizedData, cfg2),
-    [normalizedData, cfg2]
+    () => buildChartForConfig(normalizedData, cfg2, unit2),
+    [normalizedData, cfg2, unit2]
   );
 
   const handleTrendNavigation = (slot, step) => {
@@ -108,11 +121,13 @@ Plots.propTypes = {
   ).isRequired,
   setPlotConfigs: PropTypes.func.isRequired,
   rawData: PropTypes.arrayOf(PropTypes.object),
+  infoData: PropTypes.objectOf(PropTypes.object),
   loading: PropTypes.bool,
 };
 
 Plots.defaultProps = {
   rawData: [],
+  infoData: {},
   loading: false,
 };
 
