@@ -90,6 +90,8 @@ describe("chartBuilders", () => {
 
     expect(chart.title).toBe("Total Phosphorus Trend for Lake Alpha");
     expect(chart.type).toBe("d3line");
+    expect(chart.xAxisLabel).toBe("Year");
+    expect(chart.yAxisLabel).toBe("Total Phosphorus");
     expect(chart.data.labels).toEqual(["2020", "2021"]);
     expect(chart.data.datasets[0].customCounts).toEqual([3, 4]);
     expect(chart.data.datasets[0].data).toEqual([2, 4]);
@@ -110,6 +112,8 @@ describe("chartBuilders", () => {
 
     expect(chart.title).toBe("Total Phosphorus Comparison by Site");
     expect(chart.type).toBe("d3bar");
+    expect(chart.xAxisLabel).toBe("Site");
+    expect(chart.yAxisLabel).toBe("Total Phosphorus");
     expect(chart.subtitle).toBe("Selected lakes (n): 2");
     expect(chart.data.datasets[0].data).toEqual([2.667, 4]);
     expect(chart.data.datasets[0].customCounts).toEqual([7, 11]);
