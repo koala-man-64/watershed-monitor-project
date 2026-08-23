@@ -9,7 +9,8 @@ import {
   faDownload,
   faHashtag,
 } from "@fortawesome/free-solid-svg-icons";
-import { getNoDataMessage } from "../utils/plotEmptyState";
+import { getNoDataMessage, getUnconfiguredPlotMessage } from "../utils/plotEmptyState";
+import useElementSize from "./useElementSize";
 import {
   chartFontFamily,
   chartFontScale,
@@ -30,23 +31,37 @@ const labelItemType = PropTypes.oneOfType([
   PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number])),
 ]);
 
-function D3Boxplot({ labels, series, color = "#37474f", yDomain, counts = [] }) {
-  const margin = { top: 8, right: 8, bottom: 28, left: 42 };
+function D3Line({
+  labels,
+  values,
+  band = [],
+  counts = [],
+  color = "#37474f",
+  yDomain,
+  width,
+  height,
+}) {
   const [hover, setHover] = useState(null);
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
-      <svg width="100%" height="100%" viewBox="0 0 800 400" preserveAspectRatio="none">
-        <BoxplotInner
+      <svg
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <D3LineInner
           labels={labels}
-          series={series}
-          color={color}
+          values={values}
+          band={band}
           counts={counts}
+          color={color}
           yDomain={yDomain}
-          margin={margin}
-          width={800}
-          height={400}
-          onHover={(event, _, stats, label) => {
+          margin={{ top: 20, right: 14, bottom: 34, left: 54 }}
+          width={width}
+          height={height}
+          onHover={(event, index, stats, label) => {
             setHover({
               x: event.clientX,
               y: event.clientY,
@@ -88,18 +103,22 @@ function D3Boxplot({ labels, series, color = "#37474f", yDomain, counts = [] }) 
             <span style={{ fontVariantNumeric: "tabular-nums" }}>
               {formatMetricValue(hover.stats.max)}
             </span>
-            {Number.isFinite(hover.stats.mean) ? (
-              <>
-                <span style={{ textAlign: "right" }}>Mean:</span>
-                <span style={{ fontVariantNumeric: "tabular-nums" }}>
-                  {formatMetricValue(hover.stats.mean)}
-                </span>
-              </>
-            ) : null}
+            <span style={{ textAlign: "right" }}>Avg:</span>
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>
+              {formatMetricValue(hover.stats.value)}
+            </span>
             <span style={{ textAlign: "right" }}>Min:</span>
             <span style={{ fontVariantNumeric: "tabular-nums" }}>
               {formatMetricValue(hover.stats.min)}
             </span>
+            {Number.isFinite(hover.stats.count) ? (
+              <>
+                <span style={{ textAlign: "right" }}>Samples:</span>
+                <span style={{ fontVariantNumeric: "tabular-nums" }}>
+                  {hover.stats.count}
+                </span>
+              </>
+            ) : null}
           </span>
           <span
             style={{
@@ -122,43 +141,48 @@ function D3Boxplot({ labels, series, color = "#37474f", yDomain, counts = [] }) 
   );
 }
 
-D3Boxplot.propTypes = {
-  labels: PropTypes.arrayOf(
-    PropTypes.oneOfType([PropTypes.string, PropTypes.number])
-  ).isRequired,
-  series: PropTypes.arrayOf(
-    PropTypes.shape({
-      min: PropTypes.number.isRequired,
-      q1: PropTypes.number.isRequired,
-      median: PropTypes.number.isRequired,
-      q3: PropTypes.number.isRequired,
-      max: PropTypes.number.isRequired,
-      mean: PropTypes.number,
-    })
-  ).isRequired,
+D3Line.propTypes = {
+  labels: PropTypes.arrayOf(labelItemType).isRequired,
+  values: PropTypes.arrayOf(PropTypes.number).isRequired,
+  band: PropTypes.arrayOf(
+    PropTypes.shape({ min: PropTypes.number, max: PropTypes.number })
+  ),
+  counts: PropTypes.arrayOf(
+    PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])])
+  ),
   color: PropTypes.string,
   yDomain: PropTypes.shape({
     min: PropTypes.number,
     max: PropTypes.number,
   }),
-  counts: PropTypes.arrayOf(
-    PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])])
-  ),
+  width: PropTypes.number.isRequired,
+  height: PropTypes.number.isRequired,
 };
 
-D3Boxplot.defaultProps = {
+D3Line.defaultProps = {
+  band: [],
+  counts: [],
   color: "#37474f",
   yDomain: undefined,
-  counts: [],
 };
 
-function D3Bar({ labels, values, counts = [], color = "#37474f", yDomain }) {
-  const margin = { top: 16, right: 8, bottom: 40, left: 48 };
+
+function D3Bar({ labels, values, counts = [], color = "#37474f", yDomain, width, height }) {
+  const maxLabelLines = Math.min(
+    3,
+    Math.max(1, ...labels.map((label) => (Array.isArray(label) ? label.length : 1)))
+  );
+  const margin = { top: 16, right: 12, bottom: 26 + maxLabelLines * 14, left: 52 };
   const [hover, setHover] = useState(null);
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
-      <svg width="100%" height="100%" viewBox="0 0 800 400" preserveAspectRatio="none">
+      <svg
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
+      >
         <D3BarInner
           labels={labels}
           values={values}
@@ -166,8 +190,8 @@ function D3Bar({ labels, values, counts = [], color = "#37474f", yDomain }) {
           color={color}
           yDomain={yDomain}
           margin={margin}
-          width={800}
-          height={400}
+          width={width}
+          height={height}
           onHover={(event, _, value, label) => {
             setHover({
               x: event.clientX,
@@ -239,6 +263,8 @@ D3Bar.propTypes = {
     min: PropTypes.number,
     max: PropTypes.number,
   }),
+  width: PropTypes.number.isRequired,
+  height: PropTypes.number.isRequired,
 };
 
 D3Bar.defaultProps = {
@@ -293,6 +319,31 @@ function D3BarInner({
         );
       })}
 
+      {labelKeys.map((label, index) => {
+        const raw = labels[index];
+        const labelLines = (Array.isArray(raw) ? raw : [raw]).slice(0, 3);
+        const centerX = (x(label) ?? 0) + x.bandwidth() / 2;
+
+        return (
+          <text
+            key={`xlabel-${label}`}
+            x={centerX}
+            y={innerH + 16 * chartFontScale}
+            textAnchor="middle"
+            fontSize={12 * chartFontScale}
+            fill="#37474f"
+            fontFamily={chartFontFamily}
+            style={{ pointerEvents: "none", userSelect: "none" }}
+          >
+            {labelLines.map((line, lineIndex) => (
+              <tspan key={line} x={centerX} dy={lineIndex === 0 ? 0 : 13 * chartFontScale}>
+                {line}
+              </tspan>
+            ))}
+          </text>
+        );
+      })}
+
       {values.map((value, index) => {
         const label = labelKeys[index];
         const xBand = x(label) ?? 0;
@@ -301,7 +352,6 @@ function D3BarInner({
         const top = y(value);
         const centerX = x0 + barWidth / 2;
         const fillColor = Array.isArray(color) ? color[index % color.length] : color;
-        const labelText = Array.isArray(labels[index]) ? labels[index].join(" ") : labels[index];
 
         return (
           <g
@@ -331,21 +381,6 @@ function D3BarInner({
                 style={{ pointerEvents: "none", userSelect: "none" }}
               >
                 {counts[index]}
-              </text>
-            ) : null}
-            {barHeight > 10 ? (
-              <text
-                x={centerX}
-                y={top + barHeight / 2}
-                transform={`rotate(-90, ${centerX}, ${top + barHeight / 2})`}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={14 * chartFontScale}
-                fontFamily={chartFontFamily}
-                fill="#ffffff"
-                style={{ pointerEvents: "none", userSelect: "none" }}
-              >
-                {labelText}
               </text>
             ) : null}
           </g>
@@ -386,11 +421,12 @@ D3BarInner.defaultProps = {
   onLeave: undefined,
 };
 
-function BoxplotInner({
+function D3LineInner({
   labels,
-  series,
-  color,
+  values,
+  band,
   counts,
+  color,
   yDomain,
   margin,
   width,
@@ -398,148 +434,155 @@ function BoxplotInner({
   onHover,
   onLeave,
 }) {
-  const innerW = width - margin.left - margin.right;
-  const innerH = height - margin.top - margin.bottom;
-  const dataMin = d3.min(series, (datum) => datum.min);
-  const dataMax = d3.max(series, (datum) => datum.max);
-  const domainMin = yDomain?.min ?? dataMin ?? 0;
-  const domainMax = yDomain?.max ?? dataMax ?? 1;
+  const innerW = Math.max(10, width - margin.left - margin.right);
+  const innerH = Math.max(10, height - margin.top - margin.bottom);
+
+  const bandMins = band.map((entry) => Number(entry?.min)).filter(Number.isFinite);
+  const bandMaxs = band.map((entry) => Number(entry?.max)).filter(Number.isFinite);
+  const dataMin = d3.min([...values, ...bandMins]);
+  const dataMax = d3.max([...values, ...bandMaxs]);
+  const domainMin = Number.isFinite(yDomain?.min) ? yDomain.min : dataMin ?? 0;
+  const domainMax = Number.isFinite(yDomain?.max) ? yDomain.max : dataMax ?? 1;
+
   const y = d3.scaleLinear().domain([domainMin, domainMax]).nice().range([innerH, 0]);
   const labelKeys = labels.map(String);
-  const x = d3.scaleBand().domain(labelKeys).range([0, innerW]).padding(0.15);
-  const xLabelStep = 2;
-  const boxWidth = Math.max(8, Math.min(40, x.bandwidth() * 0.6));
-  const ticks = y.ticks(Math.max(2, Math.floor(innerH / 60)));
-  const points = series
-    .map((datum, index) => {
-      const label = labelKeys[index];
-      const x0 = (x(label) ?? 0) + (x.bandwidth() - boxWidth) / 2;
-      const centerX = x0 + boxWidth / 2;
-      return Number.isFinite(datum?.median) ? [centerX, y(datum.median)] : null;
-    })
-    .filter(Boolean);
+  const x = d3.scalePoint().domain(labelKeys).range([0, innerW]).padding(0.5);
+  const ticks = y.ticks(Math.max(2, Math.min(8, Math.floor(innerH / 44))));
+
+  // Adaptive x-label thinning: never overlap, whatever the year count or width.
+  const labelPx = 42 * chartFontScale;
+  const maxLabels = Math.max(1, Math.floor(innerW / labelPx));
+  const labelStep = Math.max(1, Math.ceil(labelKeys.length / maxLabels));
+
+  const cx = (index) => x(labelKeys[index]) ?? 0;
+  const hitW = labelKeys.length > 1 ? innerW / labelKeys.length : innerW;
+
+  const areaPath =
+    band.length === values.length && band.length > 1
+      ? d3
+          .area()
+          .defined((entry) => Number.isFinite(entry?.min) && Number.isFinite(entry?.max))
+          .x((_, index) => cx(index))
+          .y0((entry) => y(entry.min))
+          .y1((entry) => y(entry.max))(band)
+      : null;
+
+  const linePath =
+    values.length > 1
+      ? d3
+          .line()
+          .defined((value) => Number.isFinite(value))
+          .x((_, index) => cx(index))
+          .y((value) => y(value))(values)
+      : null;
 
   return (
     <g transform={`translate(${margin.left},${margin.top})`}>
-      {ticks.map((tick) => {
-        const py = y(tick);
-        return (
-          <g key={`tick-${tick}`} transform={`translate(0,${py})`} shapeRendering="crispEdges">
-            <line x1={0} x2={innerW} stroke="#e5e7eb" strokeWidth={0.75} />
-            <text
-              x={-10}
-              y={3}
-              textAnchor="end"
-              fontSize={14 * chartFontScale}
-              fill="#37474f"
-              fontFamily={chartFontFamily}
-              style={{ pointerEvents: "none", userSelect: "none" }}
-            >
-              {tick}
-            </text>
-          </g>
-        );
-      })}
-
-      {labelKeys.map((label, index) => {
-        if (index % xLabelStep !== 0) {
-          return null;
-        }
-
-        const centerX = (x(label) ?? 0) + x.bandwidth() / 2;
-        return (
+      {ticks.map((tick) => (
+        <g key={`tick-${tick}`} transform={`translate(0,${y(tick)})`} shapeRendering="crispEdges">
+          <line x1={0} x2={innerW} stroke="#e5e7eb" strokeWidth={0.75} />
           <text
-            key={`label-${index}`}
-            x={centerX}
-            y={innerH + 18 * chartFontScale}
-            textAnchor="middle"
-            fontSize={14 * chartFontScale}
+            x={-10}
+            y={4}
+            textAnchor="end"
+            fontSize={13 * chartFontScale}
             fill="#37474f"
+            fontFamily={chartFontFamily}
             style={{ pointerEvents: "none", userSelect: "none" }}
           >
-            {Array.isArray(labels[index]) ? labels[index].join(" ") : labels[index]}
+            {tick}
           </text>
-        );
-      })}
+        </g>
+      ))}
 
-      {series.map((datum, index) => {
-        const label = labelKeys[index];
-        const x0 = (x(label) ?? 0) + (x.bandwidth() - boxWidth) / 2;
-        const centerX = x0 + boxWidth / 2;
+      {areaPath ? <path d={areaPath} fill={color} opacity={0.18} stroke="none" /> : null}
 
-        return (
-          <g
-            key={`box-${index}`}
-            onMouseEnter={(event) => onHover?.(event, index, datum, labels[index])}
-            onMouseMove={(event) => onHover?.(event, index, datum, labels[index])}
-            onMouseLeave={onLeave}
-          >
-            <line
-              x1={centerX}
-              x2={centerX}
-              y1={y(datum.min)}
-              y2={y(datum.max)}
-              stroke={color}
-              strokeWidth={1.5}
-            />
-            <rect
-              x={x0}
-              width={boxWidth}
-              y={Math.min(y(datum.q1), y(datum.q3))}
-              height={Math.abs(y(datum.q1) - y(datum.q3))}
-              stroke={color}
-              fill="#ffffff"
-              strokeWidth={1}
-              shapeRendering="crispEdges"
-            />
-            <circle cx={centerX} cy={y(datum.median)} r={4} fill={color} />
-            {Number.isFinite(counts[index]) ? (
-              <text
-                x={centerX}
-                y={y(datum.max) - 14 * chartFontScale}
-                textAnchor="middle"
-                fontSize={14 * chartFontScale}
-                fontWeight="700"
-                fill="#37474f"
-              >
-                {counts[index]}
-              </text>
-            ) : null}
-          </g>
-        );
-      })}
-
-      {points.length > 1 ? (
+      {linePath ? (
         <path
-          d={`M ${points.map(([px, py]) => `${px},${py}`).join(" L ")}`}
+          d={linePath}
           fill="none"
           stroke={color}
           strokeWidth={2}
           strokeLinejoin="round"
           strokeLinecap="round"
-          opacity={0.9}
         />
       ) : null}
+
+      {labelKeys.map((label, index) =>
+        index % labelStep === 0 ? (
+          <text
+            key={`xlabel-${label}`}
+            x={cx(index)}
+            y={innerH + 20 * chartFontScale}
+            textAnchor="middle"
+            fontSize={13 * chartFontScale}
+            fill="#37474f"
+            fontFamily={chartFontFamily}
+            style={{ pointerEvents: "none", userSelect: "none" }}
+          >
+            {Array.isArray(labels[index]) ? labels[index].join(" ") : labels[index]}
+          </text>
+        ) : null
+      )}
+
+      {values.map((value, index) => {
+        if (!Number.isFinite(value)) {
+          return null;
+        }
+
+        const entry = band[index] || {};
+        const count = counts?.[index];
+        const showCount = Number.isFinite(count) && index % labelStep === 0;
+        const topY = Number.isFinite(entry.max) ? y(entry.max) : y(value);
+        const stats = { value, min: entry.min, max: entry.max, count };
+
+        return (
+          <g
+            key={`point-${labelKeys[index]}`}
+            onMouseEnter={(event) => onHover?.(event, index, stats, labels[index])}
+            onMouseMove={(event) => onHover?.(event, index, stats, labels[index])}
+            onMouseLeave={onLeave}
+          >
+            {/* Full-height transparent hit target: hover works anywhere in the column. */}
+            <rect
+              x={cx(index) - hitW / 2}
+              y={0}
+              width={hitW}
+              height={innerH}
+              fill="transparent"
+            />
+            <circle cx={cx(index)} cy={y(value)} r={3.5} fill={color} />
+            {showCount ? (
+              <text
+                x={cx(index)}
+                y={topY - 8 * chartFontScale}
+                textAnchor="middle"
+                fontSize={12 * chartFontScale}
+                fontWeight="700"
+                fill="#37474f"
+                fontFamily={chartFontFamily}
+                style={{ pointerEvents: "none", userSelect: "none" }}
+              >
+                {count}
+              </text>
+            ) : null}
+          </g>
+        );
+      })}
     </g>
   );
 }
 
-BoxplotInner.propTypes = {
+D3LineInner.propTypes = {
   labels: PropTypes.arrayOf(labelItemType).isRequired,
-  series: PropTypes.arrayOf(
-    PropTypes.shape({
-      min: PropTypes.number.isRequired,
-      q1: PropTypes.number.isRequired,
-      median: PropTypes.number.isRequired,
-      q3: PropTypes.number.isRequired,
-      max: PropTypes.number.isRequired,
-      mean: PropTypes.number,
-    })
-  ).isRequired,
-  color: PropTypes.string.isRequired,
+  values: PropTypes.arrayOf(PropTypes.number).isRequired,
+  band: PropTypes.arrayOf(
+    PropTypes.shape({ min: PropTypes.number, max: PropTypes.number })
+  ),
   counts: PropTypes.arrayOf(
     PropTypes.oneOfType([PropTypes.number, PropTypes.oneOf([null])])
   ),
+  color: PropTypes.string.isRequired,
   yDomain: PropTypes.shape({
     min: PropTypes.number,
     max: PropTypes.number,
@@ -556,12 +599,14 @@ BoxplotInner.propTypes = {
   onLeave: PropTypes.func,
 };
 
-BoxplotInner.defaultProps = {
+D3LineInner.defaultProps = {
+  band: [],
   counts: [],
   yDomain: undefined,
   onHover: undefined,
   onLeave: undefined,
 };
+
 
 function IconWithTooltip({ icon, label, onClick, active = false, disabled = false }) {
   const [open, setOpen] = useState(false);
@@ -689,34 +734,15 @@ IconWithTooltip.defaultProps = {
 };
 
 function ChartPanel({ chartObj, cfg, slotLabel, notice, onDownload, nav }) {
-  const containerRef = useRef(null);
-  const [ready, setReady] = useState(false);
+  const [containerRef, size] = useElementSize();
   const [showCounts, setShowCounts] = useState(false);
 
-  useLayoutEffect(() => {
-    let raf1;
-    let raf2;
-    const element = containerRef.current;
-    setReady(false);
-
-    const ensureReady = () => {
-      const inDocument =
-        element && element.ownerDocument && element.ownerDocument.body.contains(element);
-      const hasSize = element && element.clientWidth > 0 && element.clientHeight > 0;
-
-      if (inDocument && hasSize) {
-        setReady(true);
-      } else {
-        raf2 = requestAnimationFrame(ensureReady);
-      }
-    };
-
-    raf1 = requestAnimationFrame(ensureReady);
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-    };
-  }, [cfg?.parameter, cfg?.chartType, chartObj?.type, chartObj?.data?.labels?.length]);
+  // Never gate rendering on measurement. If the container has not been measured
+  // yet (no ResizeObserver, hidden tab, non-compositing host) fall back to the
+  // historical 800x400 viewBox, which CSS then scales to fit. Worst case is the
+  // old behaviour; best case is a pixel-accurate, undistorted chart.
+  const plotWidth = size.width > 0 ? size.width : 800;
+  const plotHeight = size.height > 0 ? size.height : 400;
 
   const chartData = useMemo(() => {
     if (!chartObj) {
@@ -763,7 +789,7 @@ function ChartPanel({ chartObj, cfg, slotLabel, notice, onDownload, nav }) {
 
   if (!cfg) {
     return (
-      <div className="plot-panel">
+      <div className="plot-panel plot-panel-empty">
         <div
           className="plot-header"
           style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
@@ -784,7 +810,7 @@ function ChartPanel({ chartObj, cfg, slotLabel, notice, onDownload, nav }) {
           <div className="plot-icons" style={{ opacity: 0.4 }} />
         </div>
         <div className="plot-content">
-          <div className="no-plot-message">{getNoDataMessage()}</div>
+          <div className="no-plot-message">{getUnconfiguredPlotMessage(slotLabel)}</div>
         </div>
       </div>
     );
@@ -880,16 +906,17 @@ function ChartPanel({ chartObj, cfg, slotLabel, notice, onDownload, nav }) {
       </div>
       {notice ? <div className="plot-notice">{notice}</div> : null}
       <div className="plot-content" ref={containerRef} style={{ position: "relative", flex: 1 }}>
-        {!ready ? (
-          <div style={{ height: "100%" }} />
-        ) : chartObj.type === "boxplot" ? (
-          <D3Boxplot
+        {chartObj.type === "d3line" ? (
+          <D3Line
             key={chartKey}
             labels={chartObj.data.labels}
-            series={chartData.datasets[0].data}
+            values={chartData.datasets[0].data}
+            band={chartData.datasets[0].band || []}
             counts={chartData.datasets[0].customCounts || []}
             color={chartData.datasets[0].borderColor || "#37474f"}
             yDomain={yDomain}
+            width={plotWidth}
+            height={plotHeight}
           />
         ) : chartObj.type === "d3bar" ? (
           <D3Bar
@@ -899,6 +926,8 @@ function ChartPanel({ chartObj, cfg, slotLabel, notice, onDownload, nav }) {
             counts={chartData.datasets[0].customCounts || []}
             color={chartData.datasets[0].backgroundColor || "#37474f"}
             yDomain={d3BarDomain}
+            width={plotWidth}
+            height={plotHeight}
           />
         ) : (
           <ReactChart

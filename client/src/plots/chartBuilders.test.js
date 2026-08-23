@@ -54,7 +54,7 @@ const rawData = [
   },
   {
     Site: "Lake Gamma",
-    Parameter: "Chlorophyll",
+    Parameter: "Chlorophyll-a",
     Year: "2021",
     Avg: "7",
     Min: "6.5",
@@ -89,17 +89,14 @@ describe("chartBuilders", () => {
     });
 
     expect(chart.title).toBe("Total Phosphorus Trend for Lake Alpha");
-    expect(chart.type).toBe("boxplot");
+    expect(chart.type).toBe("d3line");
     expect(chart.data.labels).toEqual(["2020", "2021"]);
     expect(chart.data.datasets[0].customCounts).toEqual([3, 4]);
-    expect(chart.data.datasets[0].data[0]).toMatchObject({
-      min: 0.5,
-      q1: 1.5,
-      median: 2,
-      q3: 2.5,
-      max: 3.5,
-      mean: 2,
-    });
+    expect(chart.data.datasets[0].data).toEqual([2, 4]);
+    expect(chart.data.datasets[0].band).toEqual([
+      { min: 0.5, max: 3.5 },
+      { min: 3, max: 5 },
+    ]);
   });
 
   it("builds a comparison chart across the selected sites", () => {
