@@ -1,7 +1,7 @@
 import { trackException } from "./telemetry";
 import { DEFAULT_DATA_REVALIDATE_AFTER_MS } from "../config/dataSources";
 
-const CSV_CACHE_PREFIX = "nwmiws:csv-cache:v1:";
+const CSV_CACHE_PREFIX = "nwmiws:csv-cache:v2:";
 
 function cacheKeyFor(url) {
   return `${CSV_CACHE_PREFIX}${url}`;
