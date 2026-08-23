@@ -11,7 +11,9 @@ This README is split into two versions:
 
 ### What this application is
 
-The NW Michigan Water Quality Database is a web application for exploring water quality data for lakes and streams in northern Michigan. It combines mapped site locations, historical measurements, charts, and downloadable data in one place.
+The NW Michigan Water Quality Database is a web application for exploring water quality data for lakes in northern Michigan. It combines mapped site locations, historical measurements, charts, and downloadable data in one place.
+
+> **Note:** the deployed site currently serves synthetic demonstration data. All values shown in the application are simulated and are not real measurements. The application displays a persistent notice to this effect on every screen.
 
 ### What people can do with it
 
@@ -23,7 +25,7 @@ The NW Michigan Water Quality Database is a web application for exploring water 
 
 ### Why it matters
 
-- It gives partners a shared view of the same published dataset.
+- It gives partners a shared view of the same dataset.
 - It makes long-term trends easier to understand without working directly in raw spreadsheets.
 - It helps discussions about watershed conditions, reporting, planning, and stakeholder communication start from the same information.
 
@@ -35,10 +37,9 @@ The NW Michigan Water Quality Database is a web application for exploring water 
 
 ### Current support contact shown in the app
 
-- John Ransom
-- Benzie County Conservation District
-- 231-882-4391
-- john@benziecd.org
+The application ships a placeholder contact. No individual name, phone number, or email address is published in the UI.
+
+TODO: replace `SUPPORT_CONTACT` and `CONTACT_DETAILS` in `client/src/siteContent.js` with the confirmed public contact — a role or team name plus a monitored shared inbox — before this site is presented as anything other than a demonstration.
 
 ## Technical Version for Operators, Developers, and Support
 
@@ -87,7 +88,7 @@ The NW Michigan Water Quality Database is a web application for exploring water 
 | --- | --- | --- |
 | `REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING` | Yes for deployed builds | Application Insights connection string for client telemetry |
 | `REACT_APP_PUBLIC_DATA_REVALIDATE_AFTER_MS` | No | CSV cache revalidation interval in milliseconds; defaults to `86400000` |
-| `REACT_APP_PRIMARY_DATA_BLOB` | No | Defaults to `NWMIWS_Site_Data_testing_varied.csv` |
+| `REACT_APP_PRIMARY_DATA_BLOB` | No | Defaults to `NWMIWS_Site_Data.csv` |
 | `REACT_APP_INFO_DATA_BLOB` | No | Defaults to `info.csv` |
 | `REACT_APP_LOCATIONS_DATA_BLOB` | No | Defaults to `locations.csv` |
 
@@ -119,7 +120,7 @@ The NW Michigan Water Quality Database is a web application for exploring water 
 
 The deployed application currently reads these tracked files directly:
 
-- `client/public/data/NWMIWS_Site_Data_testing_varied.csv`
+- `client/public/data/NWMIWS_Site_Data.csv`
 - `client/public/data/info.csv`
 - `client/public/data/locations.csv`
 
