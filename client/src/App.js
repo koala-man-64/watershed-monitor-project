@@ -192,6 +192,7 @@ function App() {
   const [filters, setFilters] = useState(createInitialFilters);
   const [plotConfigs, setPlotConfigs] = useState([]);
   const [rawData, setRawData] = useState(null);
+  const [infoData, setInfoData] = useState({});
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(true);
   const [updateEnabled, setUpdateEnabled] = useState(false);
@@ -201,8 +202,9 @@ function App() {
     setFilters((prev) => ({ ...prev, ...partialOrFull }));
   }, []);
 
-  const handleDataLoaded = useCallback(({ rawData: nextRawData }) => {
+  const handleDataLoaded = useCallback(({ rawData: nextRawData, infoData: nextInfoData }) => {
     setRawData(Array.isArray(nextRawData) ? nextRawData : []);
+    setInfoData(nextInfoData && typeof nextInfoData === "object" ? nextInfoData : {});
     setLoading(false);
   }, []);
 
@@ -239,6 +241,7 @@ function App() {
         plotConfigs={plotConfigs}
         setPlotConfigs={setPlotConfigs}
         rawData={rawData}
+        infoData={infoData}
         loading={loading}
       />
 

@@ -1,6 +1,6 @@
-Parameter,ContactInfo,AssociationInfo,ParameterInfo
-Total Phosphorus,Contact: 123-456-7890,Association: Example Lake Association,Total phosphorus measures the amount of phosphorus in water.
-Secchi Depth,Contact: 987-654-3210,Association: Secchi Lake Association,Secchi depth indicates water clarity using a Secchi disk.
-Chlorophyll-a,Contact: 321-654-9870,Association: Chloro Lake Association,Chlorophyll-a concentration is a proxy for algae biomass.
-Nitrate,Contact: 654-321-0987,Association: Nitrate Lake Association,Nitrate concentration reflects nutrient pollution levels.
-Chloride,Contact: 555-123-4567,Association: Chloride Lake Association,Chloride concentration can indicate road salt impacts.
+Parameter,ContactInfo,AssociationInfo,ParameterInfo,Unit
+Total Phosphorus,Contact: 123-456-7890,Association: Example Lake Association,Total phosphorus measures the amount of phosphorus in water.,µg/L
+Secchi Depth,Contact: 987-654-3210,Association: Secchi Lake Association,Secchi depth indicates water clarity using a Secchi disk.,ft
+Chlorophyll-a,Contact: 321-654-9870,Association: Chloro Lake Association,Chlorophyll-a concentration is a proxy for algae biomass.,µg/L
+Nitrate,Contact: 654-321-0987,Association: Nitrate Lake Association,Nitrate concentration reflects nutrient pollution levels.,mg/L
+Chloride,Contact: 555-123-4567,Association: Chloride Lake Association,Chloride concentration can indicate road salt impacts.,mg/L

@@ -1,7 +1,8 @@
 import { trackException } from "./telemetry";
 import { DEFAULT_DATA_REVALIDATE_AFTER_MS } from "../config/dataSources";
 
-const CSV_CACHE_PREFIX = "nwmiws:csv-cache:v2:";
+// v3: info.csv gained a Unit column; bump forces revalidation of cached copies.
+const CSV_CACHE_PREFIX = "nwmiws:csv-cache:v3:";
 
 function cacheKeyFor(url) {
   return `${CSV_CACHE_PREFIX}${url}`;
