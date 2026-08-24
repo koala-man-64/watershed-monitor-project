@@ -23,8 +23,8 @@
   --color-bg: #f8fafc;           /* page background: very light blue/grey */
   --color-panel-bg: #ffffff;     /* card backgrounds: white */
   --color-border: #e5e7eb;       /* neutral border lines: light grey */
-  --panel-max-width: 980px;      /* max width for the left filter/map column */
-  --filters-min-width: 860px;    /* minimum width before filter layout should scroll */
+  --panel-max-width: 760px;      /* max width for the left filter/map column */
+  --filters-min-width: 700px;    /* minimum width before filter layout should scroll */
   
   /* new */
   --font-scale: 1.125; /* 1 = 100% baseline */
@@ -96,6 +96,51 @@ h1, h2, h3, h4,
   overflow: hidden;
 }
 
+/* Persistent, non-dismissible demonstration-data notice.
+   flex:0 0 auto so it can never be shrunk by the flex algorithm inside the
+   100dvh .app column; .app-content keeps flex:1 1 auto below it. */
+.demo-banner {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 20px;
+  background: #fff7ed;
+  border-bottom: 2px solid #fdba74;
+  color: #7c2d12;
+  font-size: 14px;
+  line-height: 1.35;
+  box-sizing: border-box;
+}
+
+.demo-banner-badge {
+  flex: 0 0 auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #7c2d12;
+  color: #fff7ed;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.demo-banner-text {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .demo-banner {
+    padding: 8px 12px;
+    font-size: 13px;
+    align-items: flex-start;
+  }
+
+  .demo-banner-badge {
+    margin-top: 2px;
+  }
+}
+
 /* Main content uses a stable two-pane flex layout and stacks on mobile */
 .main {
   display: flex;
@@ -129,6 +174,7 @@ h1, h2, h3, h4,
 /* Right column hosts plots and grows to fill available space */
 .right {
   flex: 1 1 0;
+  min-width: 380px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -506,9 +552,9 @@ h1, h2, h3, h4,
 
 .filters {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
   background: var(--color-panel-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
@@ -654,11 +700,14 @@ h1, h2, h3, h4,
 /* Filter action buttons align to the end of the toolbar */
 .filter-buttons {
   display: flex;
-  flex-direction: column;   /* <— was row; now column */
-  gap: 8px;                 /* space between the two buttons */
-  flex: 0 0 160px;
-  align-self: flex-end;
-  min-width: 160px;         /* keeps a tidy, narrow column; tweak as desired */
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.filter-buttons .reset-btn {
+  width: auto;
+  padding: 8px 18px;
 }
 
 .reset-btn {
@@ -765,6 +814,25 @@ h1, h2, h3, h4,
   overflow: hidden;
 }
 
+/* An unconfigured slot should not take half the column from a real chart. */
+.plot-panel.plot-panel-empty {
+  flex: 0 0 auto;
+}
+
+.plot-panel.plot-panel-empty .plot-content {
+  flex: 0 0 auto;
+  min-height: 72px;
+}
+
+.no-plot-message {
+  max-width: 46ch;
+  margin: auto;
+  text-align: center;
+  padding: 8px 12px;
+  color: var(--color-secondary);
+  opacity: 0.85;
+}
+
 .plots-view {
   display: flex;
   flex-direction: column;
@@ -820,7 +888,7 @@ h1, h2, h3, h4,
   margin-bottom: 12px;
   flex-shrink: 0;
   font-family: "Poppins", sans-serif;
-  font-size: 18px;
+  font-size: clamp(14px, 1.15vw, 18px);
   font-weight: 600;
   color: var(--color-secondary);
 }

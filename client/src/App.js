@@ -4,6 +4,7 @@ import PropTypes from "prop-types";
 import "./App.css";
 import trendPlotIcon from "./trend_plot_icon.png";
 import comparisonPlotIcon from "./comparison_plot_icon.png";
+import DemoBanner from "./DemoBanner";
 import FiltersPanel from "./FiltersPanel";
 import Header from "./Header";
 import Plots from "./Plots";
@@ -94,9 +95,9 @@ function WelcomePanel({ onContinue }) {
             fontSize: "calc(1em * var(--font-scale, 1))",
           }}
         >
-          This database can be used to retrieve, display, and download water quality data
-          for lakes and streams in northern Michigan. Click the markers on the map
-          or use the dropdown list to identify sites that are included in the database.
+          This demonstration site shows how water quality data for lakes in northern
+          Michigan can be retrieved, displayed, and downloaded. Click the markers on the
+          map or use the Sites list to see which sites are included.
         </p>
         <p
           style={{
@@ -105,10 +106,10 @@ function WelcomePanel({ onContinue }) {
             fontSize: "calc(1em * var(--font-scale, 1))",
           }}
         >
-          You can display data for the following parameters (measurements) for lakes:
-          Chlorophyll, Chloride, Nitrate, Secchi Depth, Total Phosphorus, and Trophic
-          State Index and Chloride, Nitrate, Total Phosphorus, Flow Rate, and
-          Conductivity for streams.
+          Five parameters (measurements) are available for each lake: Chloride,
+          Chlorophyll-a, Nitrate, Secchi Depth, and Total Phosphorus. Values are reported
+          once per site per year, as a yearly average together with the minimum and
+          maximum recorded that year.
         </p>
         <p
           style={{
@@ -132,8 +133,8 @@ function WelcomePanel({ onContinue }) {
         >
           Data can also be displayed as a bar graph{" "}
           <img src={comparisonPlotIcon} alt="Comparison plot icon" /> to <strong>Compare</strong>{" "}
-          the overall water quality of up to 10 different sites. This allows you to
-          attain an overview of conditions on a more regional basis.
+          the average value of one parameter across the sites you have selected. This
+          allows you to attain an overview of conditions on a more regional basis.
         </p>
         <p
           style={{
@@ -153,9 +154,8 @@ function WelcomePanel({ onContinue }) {
             fontSize: "calc(1em * var(--font-scale, 1))",
           }}
         >
-          If you have questions or comments, please contact {SUPPORT_CONTACT.name} at the{" "}
-          {SUPPORT_CONTACT.organization} at {SUPPORT_CONTACT.phoneDisplay} or email at{" "}
-          {SUPPORT_CONTACT.email}.
+          This is a demonstration site built by the {SUPPORT_CONTACT.organization}. A
+          published contact address will be added here once it is confirmed.
         </p>
       </div>
 
@@ -192,6 +192,7 @@ function App() {
   const [filters, setFilters] = useState(createInitialFilters);
   const [plotConfigs, setPlotConfigs] = useState([]);
   const [rawData, setRawData] = useState(null);
+  const [infoData, setInfoData] = useState({});
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(true);
   const [updateEnabled, setUpdateEnabled] = useState(false);
@@ -201,8 +202,9 @@ function App() {
     setFilters((prev) => ({ ...prev, ...partialOrFull }));
   }, []);
 
-  const handleDataLoaded = useCallback(({ rawData: nextRawData }) => {
+  const handleDataLoaded = useCallback(({ rawData: nextRawData, infoData: nextInfoData }) => {
     setRawData(Array.isArray(nextRawData) ? nextRawData : []);
+    setInfoData(nextInfoData && typeof nextInfoData === "object" ? nextInfoData : {});
     setLoading(false);
   }, []);
 
@@ -239,6 +241,7 @@ function App() {
         plotConfigs={plotConfigs}
         setPlotConfigs={setPlotConfigs}
         rawData={rawData}
+        infoData={infoData}
         loading={loading}
       />
 
@@ -259,6 +262,7 @@ function App() {
     <Router>
       <div className="app">
         <Header onHomeClick={resetToWelcome} />
+        <DemoBanner />
         <div className="app-content">
           <Routes>
             <Route

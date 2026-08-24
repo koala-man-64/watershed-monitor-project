@@ -16,7 +16,7 @@ describe("mapViewport", () => {
     expect(MAP_MAX_BOUNDS_VISCOSITY).toBe(0.8);
     expect(NW_MICHIGAN_MAX_BOUNDS).toEqual([
       [44.14, -86.4],
-      [45.12, -85.15],
+      [45.4, -84.95],
     ]);
   });
 });

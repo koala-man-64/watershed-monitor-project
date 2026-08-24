@@ -81,21 +81,27 @@ export function computeYRangeForChart(chartObj) {
       return null;
     }
 
-    if (chartObj.type === "boxplot") {
-      const mins = dataset.data
-        .map((datum) => Number(datum?.min))
+    if (chartObj.type === "d3line") {
+      const values = dataset.data
+        .map((datum) => Number(datum))
         .filter((value) => Number.isFinite(value));
-      const maxs = dataset.data
-        .map((datum) => Number(datum?.max))
+      const band = Array.isArray(dataset.band) ? dataset.band : [];
+      const mins = band
+        .map((entry) => Number(entry?.min))
+        .filter((value) => Number.isFinite(value));
+      const maxs = band
+        .map((entry) => Number(entry?.max))
         .filter((value) => Number.isFinite(value));
 
-      if (!mins.length || !maxs.length) {
+      const lows = mins.length ? mins : values;
+      const highs = maxs.length ? maxs : values;
+      if (!lows.length || !highs.length) {
         return null;
       }
 
       return {
-        min: Math.min(...mins),
-        max: Math.max(...maxs),
+        min: Math.min(...lows),
+        max: Math.max(...highs),
       };
     }
 
@@ -133,6 +139,9 @@ export function getPaddedYDomain(chartObj, { floorAtZero = false } = {}) {
   };
 }
 
+// Only reachable via the <ReactChart> fallback in ChartPanel, which no chart
+// type currently uses. Kept inert rather than deleted so this change does not
+// have to touch package.json / package-lock.json.
 export function makeOptions(parameterLabel, chartObj) {
   const range = computeYRangeForChart(chartObj);
   let yMin;

@@ -2,7 +2,9 @@
 import {
   buildComparisonChart,
   buildTrendChart,
+  defaultColors,
   filterRowsForConfig,
+  formatParameterAxisLabel,
   getTrendSite,
 } from "./chartBuilders";
 
@@ -54,7 +56,7 @@ const rawData = [
   },
   {
     Site: "Lake Gamma",
-    Parameter: "Chlorophyll",
+    Parameter: "Chlorophyll-a",
     Year: "2021",
     Avg: "7",
     Min: "6.5",
@@ -89,17 +91,16 @@ describe("chartBuilders", () => {
     });
 
     expect(chart.title).toBe("Total Phosphorus Trend for Lake Alpha");
-    expect(chart.type).toBe("boxplot");
+    expect(chart.type).toBe("d3line");
+    expect(chart.xAxisLabel).toBe("Year");
+    expect(chart.yAxisLabel).toBe("Total Phosphorus");
     expect(chart.data.labels).toEqual(["2020", "2021"]);
     expect(chart.data.datasets[0].customCounts).toEqual([3, 4]);
-    expect(chart.data.datasets[0].data[0]).toMatchObject({
-      min: 0.5,
-      q1: 1.5,
-      median: 2,
-      q3: 2.5,
-      max: 3.5,
-      mean: 2,
-    });
+    expect(chart.data.datasets[0].data).toEqual([2, 4]);
+    expect(chart.data.datasets[0].band).toEqual([
+      { min: 0.5, max: 3.5 },
+      { min: 3, max: 5 },
+    ]);
   });
 
   it("builds a comparison chart across the selected sites", () => {
@@ -113,9 +114,43 @@ describe("chartBuilders", () => {
 
     expect(chart.title).toBe("Total Phosphorus Comparison by Site");
     expect(chart.type).toBe("d3bar");
+    expect(chart.xAxisLabel).toBe("Site");
+    expect(chart.yAxisLabel).toBe("Total Phosphorus");
     expect(chart.subtitle).toBe("Selected lakes (n): 2");
     expect(chart.data.datasets[0].data).toEqual([2.667, 4]);
     expect(chart.data.datasets[0].customCounts).toEqual([7, 11]);
     expect(chart.data.labels).toEqual([["Lake Alpha"], ["Lake Beta"]]);
+  });
+
+  it("formats the y axis label with a unit when one is provided", () => {
+    expect(formatParameterAxisLabel("Total Phosphorus", "µg/L")).toBe(
+      "Total Phosphorus (µg/L)"
+    );
+    expect(formatParameterAxisLabel("Total Phosphorus", "")).toBe("Total Phosphorus");
+    expect(formatParameterAxisLabel("", "µg/L")).toBe("");
+
+    const cfg = {
+      selectedSites: ["Lake Alpha", "Lake Beta"],
+      trendIndex: 0,
+      parameter: "Total Phosphorus",
+      startYear: 2020,
+      endYear: 2021,
+    };
+
+    const trend = buildTrendChart(
+      rawData,
+      { ...cfg, chartType: "trend" },
+      defaultColors,
+      "µg/L"
+    );
+    expect(trend.yAxisLabel).toBe("Total Phosphorus (µg/L)");
+
+    const comparison = buildComparisonChart(
+      rawData,
+      { ...cfg, chartType: "comparison" },
+      defaultColors,
+      "µg/L"
+    );
+    expect(comparison.yAxisLabel).toBe("Total Phosphorus (µg/L)");
   });
 });
