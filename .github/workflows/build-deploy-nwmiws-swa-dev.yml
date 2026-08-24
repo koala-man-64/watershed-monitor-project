@@ -11,8 +11,9 @@ on:
       - dev
 
 concurrency:
+  # Supersede in-flight PR preview builds, but never cancel a branch deploy.
   group: swa-dev-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build_and_deploy_job:

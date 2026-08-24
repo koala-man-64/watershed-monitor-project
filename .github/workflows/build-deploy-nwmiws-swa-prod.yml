@@ -7,8 +7,11 @@ on:
       - main
 
 concurrency:
+  # Production deploys queue; they must never cancel one another. Two merges
+  # landing close together previously cancelled the in-flight main deploy and
+  # left production silently on the old build.
   group: swa-prod-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build_and_deploy_job:
