@@ -24,7 +24,7 @@
   --color-panel-bg: #ffffff;     /* card backgrounds: white */
   --color-border: #e5e7eb;       /* neutral border lines: light grey */
   --panel-max-width: 760px;      /* max width for the left filter/map column */
-  --filters-min-width: 700px;    /* minimum width before filter layout should scroll */
+  --filters-min-width: 680px;    /* minimum width before filter layout should scroll */
   
   /* new */
   --font-scale: 1.125; /* 1 = 100% baseline */
@@ -575,8 +575,10 @@ h1, h2, h3, h4,
   flex: 1 1 auto;
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(220px, 2.2fr) repeat(4, minmax(88px, 1fr));
-  gap: 16px;
+  /* sites | start | end | parameter | chart type | actions */
+  grid-template-columns:
+    minmax(170px, 2fr) repeat(4, minmax(74px, 1fr)) minmax(112px, auto);
+  gap: 12px;
   align-items: end;
 }
 
@@ -698,16 +700,18 @@ h1, h2, h3, h4,
 }
 
 /* Filter action buttons align to the end of the toolbar */
+/* Actions sit in the last grid column, stacked, so the toolbar stays one row. */
 .filter-buttons {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 6px;
 }
 
 .filter-buttons .reset-btn {
-  width: auto;
-  padding: 8px 18px;
+  width: 100%;
+  padding: 7px 12px;
+  white-space: nowrap;
 }
 
 .reset-btn {

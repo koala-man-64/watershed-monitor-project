@@ -338,37 +338,37 @@ function FiltersPanel({
             </div>
           </>
         )}
-      </div>
 
-      {updateEnabled && (
-        <div className="filter-group filter-buttons">
-          <button
-            type="button"
-            className="reset-btn"
-            onClick={() => {
+        {updateEnabled && (
+          <div className="filter-group filter-buttons">
+            <button
+              type="button"
+              className="reset-btn"
+              onClick={() => {
               trackPlotUpdate("plot1");
               onUpdatePlot1(filters);
-            }}
-            disabled={!updateEnabled}
-            title={!updateEnabled ? disabledHint : "Update the left plot with current filters"}
+              }}
+              disabled={!updateEnabled}
+              title={!updateEnabled ? disabledHint : "Update the left plot with current filters"}
           >
-            Update Plot 1
-          </button>
+              Update Plot 1
+            </button>
 
-          <button
-            type="button"
-            className="reset-btn"
-            onClick={() => {
+            <button
+              type="button"
+              className="reset-btn"
+              onClick={() => {
               trackPlotUpdate("plot2");
               onUpdatePlot2(filters);
-            }}
-            disabled={!updateEnabled}
-            title={!updateEnabled ? disabledHint : "Update the right plot with current filters"}
+              }}
+              disabled={!updateEnabled}
+              title={!updateEnabled ? disabledHint : "Update the right plot with current filters"}
           >
-            Update Plot 2
-          </button>
-        </div>
-      )}
+              Update Plot 2
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
