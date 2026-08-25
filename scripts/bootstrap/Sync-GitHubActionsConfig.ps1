@@ -37,16 +37,11 @@ function Get-EnvironmentConfig {
 function Get-WorkflowSecretNames {
   param(
     [string]$WorkflowPath,
-    [string]$ConnectionStringFallback,
     [string]$StaticWebAppTokenFallback
   )
 
   $content = Get-Content -Raw -LiteralPath $WorkflowPath
   Write-Verbose "Inspecting workflow file '$WorkflowPath' for managed secret names."
-  $connectionStringMatch = [regex]::Match(
-    $content,
-    'REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING:\s*\$\{\{\s*secrets\.([A-Z0-9_]+)\s*\}\}'
-  )
   $staticWebAppMatches = [regex]::Matches(
     $content,
     'azure_static_web_apps_api_token:\s*\$\{\{\s*secrets\.([A-Z0-9_]+)\s*\}\}'
@@ -58,11 +53,6 @@ function Get-WorkflowSecretNames {
   }
 
   return @{
-    ConnectionStringSecretName = if ($connectionStringMatch.Success) {
-      [string]$connectionStringMatch.Groups[1].Value
-    } else {
-      $ConnectionStringFallback
-    }
     StaticWebAppTokenSecretName = $staticWebAppSecretName
   }
 }
@@ -270,10 +260,7 @@ function Get-RepositoryVariableNames {
 function Test-ManagedSecretName {
   param([string]$Name)
 
-  return (
-    $Name -like "REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING_*" -or
-    $Name -like "AZURE_STATIC_WEB_APPS_API_TOKEN_*"
-  )
+  return ($Name -like "AZURE_STATIC_WEB_APPS_API_TOKEN_*")
 }
 
 function Get-NonEmptyHashtable {
@@ -326,23 +313,13 @@ Write-ScriptStep "Target repository: $Repository"
 Write-ScriptStep "Reading managed secret names from workflow definitions."
 $devWorkflowSecrets = Get-WorkflowSecretNames `
   -WorkflowPath (Join-Path $repoRoot ".github/workflows/build-deploy-nwmiws-swa-dev.yml") `
-  -ConnectionStringFallback "REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING_DEV" `
   -StaticWebAppTokenFallback "AZURE_STATIC_WEB_APPS_API_TOKEN_NWMIWS_DEV"
 
 $prodWorkflowSecrets = Get-WorkflowSecretNames `
   -WorkflowPath (Join-Path $repoRoot ".github/workflows/build-deploy-nwmiws-swa-prod.yml") `
-  -ConnectionStringFallback "REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING_PROD" `
   -StaticWebAppTokenFallback "AZURE_STATIC_WEB_APPS_API_TOKEN_NWMIWS_PROD"
 
 Write-ScriptStep "Resolving managed secret values from the local env file."
-$devConnectionString = Get-RequiredEnvValue `
-  -EnvValues $envValues `
-  -Description "dev Application Insights connection string" `
-  -Names @($devWorkflowSecrets.ConnectionStringSecretName)
-$prodConnectionString = Get-RequiredEnvValue `
-  -EnvValues $envValues `
-  -Description "prod Application Insights connection string" `
-  -Names @($prodWorkflowSecrets.ConnectionStringSecretName)
 $devStaticWebAppToken = Get-RequiredEnvValue `
   -EnvValues $envValues `
   -Description "dev Static Web Apps deployment token" `
@@ -354,8 +331,6 @@ $prodStaticWebAppToken = Get-RequiredEnvValue `
 
 Write-ScriptStep "Computing desired GitHub secrets and variables."
 $desiredSecrets = [ordered]@{
-  $devWorkflowSecrets.ConnectionStringSecretName = $devConnectionString
-  $prodWorkflowSecrets.ConnectionStringSecretName = $prodConnectionString
   $devWorkflowSecrets.StaticWebAppTokenSecretName = $devStaticWebAppToken
   $prodWorkflowSecrets.StaticWebAppTokenSecretName = $prodStaticWebAppToken
 }
@@ -367,10 +342,6 @@ $desiredVariables = [ordered]@{
   NWMIWS_STORAGE_ACCOUNT = Get-StorageAccountNameFromEnv -EnvValues $envValues
   NWMIWS_STATIC_WEB_APP_DEV = Get-OptionalEnvValue -EnvValues $envValues -Names @("NWMIWS_STATIC_WEB_APP_DEV") -DefaultValue ([string]$devConfig.StaticWebAppName)
   NWMIWS_STATIC_WEB_APP_PROD = Get-OptionalEnvValue -EnvValues $envValues -Names @("NWMIWS_STATIC_WEB_APP_PROD") -DefaultValue ([string]$prodConfig.StaticWebAppName)
-  NWMIWS_APP_INSIGHTS_DEV = Get-OptionalEnvValue -EnvValues $envValues -Names @("NWMIWS_APP_INSIGHTS_DEV") -DefaultValue ([string]$devConfig.ApplicationInsightsName)
-  NWMIWS_APP_INSIGHTS_PROD = Get-OptionalEnvValue -EnvValues $envValues -Names @("NWMIWS_APP_INSIGHTS_PROD") -DefaultValue ([string]$prodConfig.ApplicationInsightsName)
-  NWMIWS_LOG_ANALYTICS_DEV = Get-OptionalEnvValue -EnvValues $envValues -Names @("NWMIWS_LOG_ANALYTICS_DEV") -DefaultValue ([string](Get-LogAnalyticsWorkspaceName -ApplicationInsightsName $devConfig.ApplicationInsightsName))
-  NWMIWS_LOG_ANALYTICS_PROD = Get-OptionalEnvValue -EnvValues $envValues -Names @("NWMIWS_LOG_ANALYTICS_PROD") -DefaultValue ([string](Get-LogAnalyticsWorkspaceName -ApplicationInsightsName $prodConfig.ApplicationInsightsName))
   NWMIWS_AZURE_MAPS_ACCOUNT_DEV = Get-OptionalEnvValue -EnvValues $envValues -Names @("NWMIWS_AZURE_MAPS_ACCOUNT_DEV") -DefaultValue ([string]$devConfig.AzureMapsAccountName)
   NWMIWS_AZURE_MAPS_ACCOUNT_PROD = Get-OptionalEnvValue -EnvValues $envValues -Names @("NWMIWS_AZURE_MAPS_ACCOUNT_PROD") -DefaultValue ([string]$prodConfig.AzureMapsAccountName)
   NWMIWS_ALLOWED_ORIGINS_DEV = Get-OptionalEnvValue -EnvValues $envValues -Names @("NWMIWS_ALLOWED_ORIGINS_DEV") -DefaultValue ([string](@($devConfig.AllowedOrigins) -join ","))

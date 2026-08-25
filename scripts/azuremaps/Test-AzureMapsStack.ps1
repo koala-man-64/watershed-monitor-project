@@ -109,20 +109,6 @@ if (-not $staticWebApp) {
   $issues.Add("Static Web App '$($config.StaticWebAppName)' was not found.")
 }
 
-$appInsights = Invoke-AzJson -Arguments @(
-  "monitor",
-  "app-insights",
-  "component",
-  "show",
-  "--app",
-  $config.ApplicationInsightsName,
-  "--resource-group",
-  $config.ApplicationInsightsResourceGroupName
-) -AllowFailure
-if (-not $appInsights) {
-  $issues.Add("Application Insights '$($config.ApplicationInsightsName)' was not found.")
-}
-
 $mapsAccount = Invoke-AzJson -Arguments @(
   "maps",
   "account",

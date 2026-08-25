@@ -85,124 +85,6 @@ function Ensure-StaticWebAppExists {
   )
 }
 
-function Ensure-LogAnalyticsWorkspace {
-  param(
-    [hashtable]$Config,
-    [bool]$WhatIfMode
-  )
-
-  $workspaceName = Get-LogAnalyticsWorkspaceName -ApplicationInsightsName $Config.ApplicationInsightsName
-  $workspace = Invoke-AzJson -Arguments @(
-    "monitor",
-    "log-analytics",
-    "workspace",
-    "show",
-    "--workspace-name",
-    $workspaceName,
-    "--resource-group",
-    $Config.ResourceGroupName
-  ) -AllowFailure
-
-  if ($workspace) {
-    Write-ScriptStep "Log Analytics workspace '$workspaceName' already exists."
-    return $workspace
-  }
-
-  if ($WhatIfMode) {
-    Write-Host "WhatIf: would create Log Analytics workspace '$workspaceName'."
-    return [pscustomobject]@{
-      id = "<created-on-apply>"
-      name = $workspaceName
-    }
-  }
-
-  $tagArguments = ConvertTo-TagArgumentList -Tags $Config.Tags
-  $arguments = @(
-    "monitor",
-    "log-analytics",
-    "workspace",
-    "create",
-    "--workspace-name",
-    $workspaceName,
-    "--resource-group",
-    $Config.ResourceGroupName,
-    "--location",
-    $Config.Location,
-    "--sku",
-    "PerGB2018",
-    "--retention-time",
-    "30"
-  )
-
-  if ($tagArguments.Count -gt 0) {
-    $arguments += @("--tags") + $tagArguments
-  }
-
-  return Invoke-AzJson -Arguments $arguments
-}
-
-function Ensure-ApplicationInsightsComponent {
-  param(
-    [hashtable]$Config,
-    [object]$Workspace,
-    [bool]$WhatIfMode
-  )
-
-  $component = Invoke-AzJson -Arguments @(
-    "monitor",
-    "app-insights",
-    "component",
-    "show",
-    "--app",
-    $Config.ApplicationInsightsName,
-    "--resource-group",
-    $Config.ApplicationInsightsResourceGroupName
-  ) -AllowFailure
-
-  if ($component) {
-    Write-ScriptStep "Application Insights '$($Config.ApplicationInsightsName)' already exists."
-    return $component
-  }
-
-  if ($WhatIfMode) {
-    Write-Host "WhatIf: would create Application Insights component '$($Config.ApplicationInsightsName)'."
-    return [pscustomobject]@{
-      name = $Config.ApplicationInsightsName
-      workspaceResourceId = $Workspace.id
-    }
-  }
-
-  $tagArguments = ConvertTo-TagArgumentList -Tags $Config.Tags
-  $arguments = @(
-    "monitor",
-    "app-insights",
-    "component",
-    "create",
-    "--app",
-    $Config.ApplicationInsightsName,
-    "--resource-group",
-    $Config.ApplicationInsightsResourceGroupName,
-    "--location",
-    $Config.Location,
-    "--application-type",
-    "web",
-    "--kind",
-    "web",
-    "--workspace",
-    $Workspace.id,
-    "--ingestion-access",
-    "Enabled",
-    "--query-access",
-    "Enabled"
-  )
-
-  if ($tagArguments.Count -gt 0) {
-    $arguments += @("--tags") + $tagArguments
-  }
-
-  return Invoke-AzJson -Arguments $arguments
-}
-
 function Invoke-AzureMapsDeployment {
   param(
     [string]$Environment,
@@ -275,8 +157,6 @@ foreach ($environment in @("dev", "prod")) {
   Set-Subscription -SubscriptionId $config.SubscriptionId
 
   Write-ScriptStep "Ensuring required Azure resource providers are registered."
-  Ensure-ProviderRegistered -Namespace "Microsoft.Insights"
-  Ensure-ProviderRegistered -Namespace "Microsoft.OperationalInsights"
   Ensure-ProviderRegistered -Namespace "Microsoft.Maps"
   Ensure-ProviderRegistered -Namespace "Microsoft.ManagedIdentity"
 
@@ -284,12 +164,6 @@ foreach ($environment in @("dev", "prod")) {
   Ensure-ResourceGroup -Config $config -WhatIfMode $whatIfMode
 
   Ensure-StaticWebAppExists -Config $config
-
-  Write-ScriptStep "Ensuring Log Analytics workspace for '$($config.ApplicationInsightsName)'."
-  $workspace = Ensure-LogAnalyticsWorkspace -Config $config -WhatIfMode $whatIfMode
-
-  Write-ScriptStep "Ensuring Application Insights '$($config.ApplicationInsightsName)'."
-  $null = Ensure-ApplicationInsightsComponent -Config $config -Workspace $workspace -WhatIfMode $whatIfMode
 
   Invoke-AzureMapsDeployment -Environment $environment -RotateClientSecrets:$RotateClientSecrets -WhatIfMode $whatIfMode
 }

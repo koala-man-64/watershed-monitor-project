@@ -285,20 +285,6 @@ function ConvertTo-TagArgumentList {
   return @($Tags.GetEnumerator() | Sort-Object Key | ForEach-Object { "{0}={1}" -f $_.Key, $_.Value })
 }
 
-function Get-LogAnalyticsWorkspaceName {
-  [CmdletBinding()]
-  param(
-    [Parameter(Mandatory)]
-    [string]$ApplicationInsightsName
-  )
-
-  if ($ApplicationInsightsName -match '^appi-(.+)$') {
-    return "log-$($matches[1])"
-  }
-
-  return "$ApplicationInsightsName-law"
-}
-
 function Get-StorageAccountNameFromConnectionString {
   [CmdletBinding()]
   param(
@@ -317,4 +303,4 @@ function Get-StorageAccountNameFromConnectionString {
   return $null
 }
 
-Export-ModuleMember -Function ConvertFrom-JsonCompat, ConvertTo-ArrayCompat, ConvertTo-JsonCompat, ConvertTo-TagArgumentList, Ensure-AzCli, Ensure-AzExtensionInstalled, Ensure-BicepAvailable, Ensure-ProviderRegistered, Get-LogAnalyticsWorkspaceName, Get-StorageAccountNameFromConnectionString, Invoke-Az, Invoke-AzJson, Mask-Secret, New-TemporaryJsonFile, Require-AzLogin, Set-Subscription
+Export-ModuleMember -Function ConvertFrom-JsonCompat, ConvertTo-ArrayCompat, ConvertTo-JsonCompat, ConvertTo-TagArgumentList, Ensure-AzCli, Ensure-AzExtensionInstalled, Ensure-BicepAvailable, Ensure-ProviderRegistered, Get-StorageAccountNameFromConnectionString, Invoke-Az, Invoke-AzJson, Mask-Secret, New-TemporaryJsonFile, Require-AzLogin, Set-Subscription

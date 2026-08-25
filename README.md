@@ -86,7 +86,6 @@ TODO: replace `SUPPORT_CONTACT` and `CONTACT_DETAILS` in `client/src/siteContent
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING` | Yes for deployed builds | Application Insights connection string for client telemetry |
 | `REACT_APP_PUBLIC_DATA_REVALIDATE_AFTER_MS` | No | CSV cache revalidation interval in milliseconds; defaults to `86400000` |
 | `REACT_APP_PRIMARY_DATA_BLOB` | No | Defaults to `NWMIWS_Site_Data.csv` |
 | `REACT_APP_INFO_DATA_BLOB` | No | Defaults to `info.csv` |
@@ -113,8 +112,6 @@ TODO: replace `SUPPORT_CONTACT` and `CONTACT_DETAILS` in `client/src/siteContent
 
 - `AZURE_STATIC_WEB_APPS_API_TOKEN_NWMIWS_DEV`
 - `AZURE_STATIC_WEB_APPS_API_TOKEN_NWMIWS_PROD`
-- `REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING_DEV`
-- `REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING_PROD`
 
 ### Static data operations
 
@@ -261,8 +258,6 @@ Before running the GitHub sync script, make sure `api/.env` contains these requi
 
 - `AZURE_STATIC_WEB_APPS_API_TOKEN_NWMIWS_DEV`
 - `AZURE_STATIC_WEB_APPS_API_TOKEN_NWMIWS_PROD`
-- `REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING_DEV`
-- `REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING_PROD`
 
 Additional operator detail is documented in:
 
