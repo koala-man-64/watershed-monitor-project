@@ -65,7 +65,6 @@ This is the bridge between deployed cloud configuration and the local Functions 
 Higher-level Azure bootstrap entrypoint.
 
 - Ensures shared Azure prerequisites exist for `dev` and `prod`
-- Creates Log Analytics and Application Insights when missing
 - Calls the Azure Maps deploy script
 - Calls the Azure Maps test script after deployment
 

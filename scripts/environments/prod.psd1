@@ -5,8 +5,6 @@
   Location = "eastus"
   StaticWebAppName = "nwmiws-prod"
   StaticWebAppResourceGroupName = "nwmiws-rg"
-  ApplicationInsightsName = "appi-nwmiws-prod"
-  ApplicationInsightsResourceGroupName = "nwmiws-rg"
   AzureMapsAccountName = "nwmiws-prod-maps"
   ManagedIdentityName = "nwmiws-prod-maps-uami"
   AppRegistrationDisplayName = "nwmiws-azure-maps-prod"

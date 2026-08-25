@@ -49,22 +49,6 @@ function Assert-ExistingStaticWebApp {
   )
 }
 
-function Assert-ExistingApplicationInsights {
-  param([hashtable]$Config)
-
-  Write-ScriptStep "Validating Application Insights '$($Config.ApplicationInsightsName)'."
-  $null = Invoke-AzJson -Arguments @(
-    "monitor",
-    "app-insights",
-    "component",
-    "show",
-    "--app",
-    $Config.ApplicationInsightsName,
-    "--resource-group",
-    $Config.ApplicationInsightsResourceGroupName
-  )
-}
-
 function ConvertTo-SettingHashtable {
   param([object]$InputObject)
 
@@ -305,7 +289,6 @@ Ensure-BicepAvailable
 
 Write-ScriptStep "Validating prerequisite resources."
 Assert-ExistingStaticWebApp -Config $config
-Assert-ExistingApplicationInsights -Config $config
 
 $deploymentParameters = [ordered]@{
   '$schema' = "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#"
