@@ -67,8 +67,6 @@ jobs:
 
       - name: Build Client App
         working-directory: ./client
-        env:
-          REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING_DEV }}
         run: npm run build
 
       - name: Build And Deploy
