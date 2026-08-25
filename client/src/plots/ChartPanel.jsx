@@ -192,14 +192,11 @@ function D3Bar({
   xLabel,
   yLabel,
 }) {
-  const maxLabelLines = Math.min(
-    3,
-    Math.max(1, ...labels.map((label) => (Array.isArray(label) ? label.length : 1)))
-  );
   const margin = {
+    // Site names sit inside the bars, so the axis only needs room for its title.
     top: 16,
     right: 12,
-    bottom: 26 + maxLabelLines * 14 + (xLabel ? 20 * chartFontScale : 0),
+    bottom: 22 + (xLabel ? 20 * chartFontScale : 0),
     left: 52 + (yLabel ? 20 * chartFontScale : 0),
   };
   const [hover, setHover] = useState(null);
@@ -387,6 +384,12 @@ function D3BarInner({
   const x = d3.scaleBand().domain(labelKeys).range([0, innerW]).padding(0.2);
   const ticks = y.ticks(Math.max(2, Math.floor(innerH / 60)));
   const barWidth = Math.max(8, Math.min(48, x.bandwidth()));
+  // Rotated in-bar labels occupy roughly one line-height of horizontal space,
+  // so cap the font by the band pitch or neighbouring labels collide.
+  const barLabelSize = Math.max(
+    8,
+    Math.min(12 * chartFontScale, (x.bandwidth() - 2) / 1.2)
+  );
 
   return (
     <g transform={`translate(${margin.left},${margin.top})`}>
@@ -417,31 +420,6 @@ function D3BarInner({
         );
       })}
 
-      {labelKeys.map((label, index) => {
-        const raw = labels[index];
-        const labelLines = (Array.isArray(raw) ? raw : [raw]).slice(0, 3);
-        const centerX = (x(label) ?? 0) + x.bandwidth() / 2;
-
-        return (
-          <text
-            key={`xlabel-${label}`}
-            x={centerX}
-            y={innerH + 16 * chartFontScale}
-            textAnchor="middle"
-            fontSize={12 * chartFontScale}
-            fill="#37474f"
-            fontFamily={chartFontFamily}
-            style={{ pointerEvents: "none", userSelect: "none" }}
-          >
-            {labelLines.map((line, lineIndex) => (
-              <tspan key={line} x={centerX} dy={lineIndex === 0 ? 0 : 13 * chartFontScale}>
-                {line}
-              </tspan>
-            ))}
-          </text>
-        );
-      })}
-
       {values.map((value, index) => {
         const label = labelKeys[index];
         const xBand = x(label) ?? 0;
@@ -467,6 +445,34 @@ function D3BarInner({
               opacity={0.9}
               shapeRendering="crispEdges"
             />
+            {(() => {
+              const raw = labels[index];
+              const text = Array.isArray(raw) ? raw.join(" ") : String(raw ?? "");
+              if (!text) {
+                return null;
+              }
+
+              // Rough advance width for this face at this size; good enough to
+              // decide whether the string clears the bar.
+              const textLength = text.length * barLabelSize * 0.55;
+              const fitsInside = textLength + 14 <= barHeight;
+              const anchorY = fitsInside ? innerH - 8 : top - 8;
+
+              return (
+                <text
+                  x={centerX}
+                  y={anchorY}
+                  textAnchor="start"
+                  transform={`rotate(-90, ${centerX}, ${anchorY})`}
+                  fontSize={barLabelSize}
+                  fontFamily={chartFontFamily}
+                  fill={fitsInside ? "#ffffff" : "#37474f"}
+                  style={{ pointerEvents: "none", userSelect: "none" }}
+                >
+                  {text}
+                </text>
+              );
+            })()}
             {Number.isFinite(counts?.[index]) ? (
               <text
                 x={centerX}
