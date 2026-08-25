@@ -1,83 +1,93 @@
 /* eslint-env jest */
-jest.mock("@microsoft/applicationinsights-web", () => {
-  const trackEvent = jest.fn();
-  const trackException = jest.fn();
-  const trackMetric = jest.fn();
-  const trackPageView = jest.fn();
-  const loadAppInsights = jest.fn();
-
-  return {
-    ApplicationInsights: jest.fn().mockImplementation(() => ({
-      loadAppInsights,
-      trackEvent,
-      trackException,
-      trackMetric,
-      trackPageView,
-    })),
-    __mocks: {
-      loadAppInsights,
-      trackEvent,
-      trackException,
-      trackMetric,
-      trackPageView,
-    },
-  };
-});
+import {
+  initializeTelemetry,
+  isTelemetryEnabled,
+  registerTelemetrySink,
+  resetTelemetryForTests,
+  trackEvent,
+  trackException,
+  trackMetric,
+  trackWebVital,
+} from "./telemetry";
 
 describe("telemetry", () => {
-  const originalConnectionString =
-    globalThis.process?.env?.REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING;
-
-  beforeEach(() => {
-    jest.resetModules();
-    globalThis.process.env.REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING = "";
-  });
-
   afterEach(() => {
-    globalThis.process.env.REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING =
-      originalConnectionString;
-    jest.clearAllMocks();
+    resetTelemetryForTests();
   });
 
-  it("is a no-op when the connection string is not configured", async () => {
-    const telemetry = await import("./telemetry");
-
-    expect(telemetry.initializeTelemetry()).toBeNull();
-    expect(telemetry.trackEvent("plot_updated", { slot: 1 })).toBe(false);
-    expect(telemetry.trackException(new Error("boom"))).toBe(false);
-    expect(telemetry.trackMetric("CLS", 0.01)).toBe(false);
+  it("is inert when no sink is registered", () => {
+    expect(initializeTelemetry()).toBeNull();
+    expect(isTelemetryEnabled()).toBe(false);
+    expect(trackEvent("plot_updated", { slot: 1 })).toBe(false);
+    expect(trackException(new Error("boom"))).toBe(false);
+    expect(trackMetric("CLS", 0.01)).toBe(false);
   });
 
-  it("initializes once and forwards events to Application Insights", async () => {
-    globalThis.process.env.REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING =
-      "InstrumentationKey=test-key";
+  it("forwards to a registered sink with stringified properties", () => {
+    const sink = {
+      trackEvent: jest.fn(),
+      trackException: jest.fn(),
+      trackMetric: jest.fn(),
+    };
+    registerTelemetrySink(sink);
 
-    const telemetry = await import("./telemetry");
-    const aiModule = await import("@microsoft/applicationinsights-web");
+    expect(isTelemetryEnabled()).toBe(true);
 
-    telemetry.resetTelemetryForTests();
-    const client = telemetry.initializeTelemetry();
-
-    expect(client).not.toBeNull();
-    expect(aiModule.ApplicationInsights).toHaveBeenCalledTimes(1);
-    expect(aiModule.__mocks.loadAppInsights).toHaveBeenCalledTimes(1);
-    expect(aiModule.__mocks.trackPageView).toHaveBeenCalledTimes(1);
-
-    expect(telemetry.trackEvent("plot_updated", { slot: 1 })).toBe(true);
-    expect(aiModule.__mocks.trackEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "plot_updated" }),
-      expect.objectContaining({ slot: "1" })
+    expect(trackEvent("plot_updated", { slot: 1 })).toBe(true);
+    expect(sink.trackEvent).toHaveBeenCalledWith(
+      "plot_updated",
+      expect.objectContaining({ slot: "1" }),
+      undefined
     );
 
-    expect(telemetry.trackException(new Error("boom"), { source: "test" })).toBe(
-      true
+    expect(trackException(new Error("boom"), { source: "test" })).toBe(true);
+    expect(sink.trackException).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ source: "test" })
     );
-    expect(aiModule.__mocks.trackException).toHaveBeenCalled();
 
-    expect(telemetry.trackMetric("CLS", 0.01, { rating: "good" })).toBe(true);
-    expect(aiModule.__mocks.trackMetric).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "CLS", average: 0.01 }),
+    expect(trackMetric("CLS", 0.01, { rating: "good" })).toBe(true);
+    expect(sink.trackMetric).toHaveBeenCalledWith(
+      "CLS",
+      0.01,
       expect.objectContaining({ rating: "good" })
     );
+  });
+
+  it("wraps a non-Error value before reporting it", () => {
+    const sink = { trackException: jest.fn() };
+    registerTelemetrySink(sink);
+
+    expect(trackException("plain string failure")).toBe(true);
+    const [reported] = sink.trackException.mock.calls[0];
+    expect(reported).toBeInstanceOf(Error);
+    expect(reported.message).toBe("plain string failure");
+  });
+
+  it("drops web vitals that carry no finite value", () => {
+    const sink = { trackMetric: jest.fn() };
+    registerTelemetrySink(sink);
+
+    expect(trackWebVital({ name: "CLS", value: Number.NaN })).toBe(false);
+    expect(trackWebVital({ value: 1 })).toBe(false);
+    expect(sink.trackMetric).not.toHaveBeenCalled();
+
+    expect(trackWebVital({ name: "CLS", value: 0.02, rating: "good" })).toBe(true);
+    expect(sink.trackMetric).toHaveBeenCalledWith(
+      "CLS",
+      0.02,
+      expect.objectContaining({ rating: "good" })
+    );
+  });
+
+  it("stops forwarding once the sink is cleared", () => {
+    const sink = { trackEvent: jest.fn() };
+    registerTelemetrySink(sink);
+    expect(trackEvent("first")).toBe(true);
+
+    registerTelemetrySink(null);
+    expect(isTelemetryEnabled()).toBe(false);
+    expect(trackEvent("second")).toBe(false);
+    expect(sink.trackEvent).toHaveBeenCalledTimes(1);
   });
 });
