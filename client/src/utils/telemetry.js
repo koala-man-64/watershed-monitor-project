@@ -1,14 +1,23 @@
-import { ApplicationInsights } from "@microsoft/applicationinsights-web";
+/**
+ * Telemetry seams.
+ *
+ * The Application Insights resources for this project were retired on
+ * 2026-08-25, along with their connection strings, so there is nothing for a
+ * provider SDK to talk to. The `@microsoft/applicationinsights-web` dependency
+ * was removed with them.
+ *
+ * The instrumentation points themselves are kept. There are 21 of them across
+ * the map, chart, download and CSV-cache modules, several covered by tests that
+ * assert the error paths report. Deleting the calls would cost that coverage
+ * and make re-adding observability a 21-site change.
+ *
+ * With no sink registered every `track*` call is inert and returns false. To
+ * turn telemetry back on, provision a provider and call
+ * `registerTelemetrySink()` once during start-up; nothing else has to change.
+ */
 
-let telemetryClient = null;
-let initializationFailed = false;
-
-function getConnectionString() {
-  const env = globalThis.process?.env || {};
-  return String(
-    env.REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING || ""
-  ).trim();
-}
+let sink = null;
+let initialized = false;
 
 function serializeValue(value) {
   if (value == null) {
@@ -42,105 +51,59 @@ function normalizeProperties(properties = {}) {
   );
 }
 
-function getTelemetryClient() {
-  if (telemetryClient || initializationFailed) {
-    return telemetryClient;
-  }
-
-  const connectionString = getConnectionString();
-  if (!connectionString) {
-    return null;
-  }
-
-  try {
-    const pageTitle =
-      typeof document !== "undefined" && document.title
-        ? document.title
-        : "NW Michigan Watershed";
-    const pageUri =
-      typeof window !== "undefined" && window.location
-        ? window.location.href
-        : undefined;
-
-    telemetryClient = new ApplicationInsights({
-      config: {
-        connectionString,
-        enableAutoRouteTracking: true,
-        autoTrackPageVisitTime: true,
-      },
-    });
-    telemetryClient.loadAppInsights();
-    telemetryClient.trackPageView({
-      name: pageTitle,
-      uri: pageUri,
-    });
-  } catch (error) {
-    initializationFailed = true;
-    telemetryClient = null;
-    console.warn("Application Insights initialization failed.", error);
-  }
-
-  return telemetryClient;
+/**
+ * Register a telemetry provider. Expects an object with any of
+ * `trackEvent(name, properties, measurements)`,
+ * `trackException(error, properties)` and
+ * `trackMetric(name, value, properties)`.
+ */
+export function registerTelemetrySink(nextSink) {
+  sink = nextSink || null;
+  initialized = Boolean(sink);
+  return sink;
 }
 
 export function initializeTelemetry() {
-  return getTelemetryClient();
+  initialized = Boolean(sink);
+  return sink;
 }
 
 export function isTelemetryEnabled() {
-  return Boolean(getConnectionString());
+  return Boolean(sink);
 }
 
 export function trackEvent(name, properties = {}, measurements) {
-  const client = getTelemetryClient();
-  if (!client || !name) {
+  if (!sink || typeof sink.trackEvent !== "function" || !name) {
     return false;
   }
 
-  const normalizedProperties = normalizeProperties(properties);
-  client.trackEvent(
-    {
-      name,
-      measurements,
-    },
-    normalizedProperties
-  );
+  sink.trackEvent(name, normalizeProperties(properties), measurements);
   return true;
 }
 
 export function trackException(error, properties = {}) {
-  const client = getTelemetryClient();
-  if (!client || !error) {
+  if (!sink || typeof sink.trackException !== "function" || !error) {
     return false;
   }
 
   const exception =
     error instanceof Error ? error : new Error(serializeValue(error) || "Unknown error");
-  const normalizedProperties = normalizeProperties(properties);
 
-  client.trackException(
-    {
-      exception,
-    },
-    normalizedProperties
-  );
+  sink.trackException(exception, normalizeProperties(properties));
   return true;
 }
 
 export function trackMetric(name, value, properties = {}) {
-  const client = getTelemetryClient();
-  if (!client || !name || !Number.isFinite(value)) {
+  if (
+    !sink ||
+    typeof sink.trackMetric !== "function" ||
+    !name ||
+    !Number.isFinite(value)
+  ) {
     return false;
   }
 
-  client.trackMetric(
-    {
-      name,
-      average: value,
-      sampleCount: 1,
-    },
-    normalizeProperties(properties)
-  );
+  sink.trackMetric(name, value, normalizeProperties(properties));
   return true;
 }
 
@@ -158,6 +121,10 @@ export function trackWebVital(metric) {
 }
 
 export function resetTelemetryForTests() {
-  telemetryClient = null;
-  initializationFailed = false;
+  sink = null;
+  initialized = false;
+}
+
+export function isTelemetryInitialized() {
+  return initialized;
 }
