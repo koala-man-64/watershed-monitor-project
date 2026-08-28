@@ -148,15 +148,20 @@ test("updating plot 1 stores a normalized trend config", () => {
 test("the demonstration notice is visible on the welcome view and the plots view", () => {
   render(<App />);
 
+  // The dataset mixes one measured series with simulated values everywhere
+  // else, so the banner has to say both halves - a blanket "all simulated"
+  // would be wrong, and staying silent about the rest would be worse.
+  expect(screen.getByRole("note")).toHaveTextContent(/values are simulated except/i);
   expect(screen.getByRole("note")).toHaveTextContent(
-    /all values shown are simulated and are not real measurements/i
+    /platte lake \(big platte\) total phosphorus for 2020-2025/i
   );
 
   fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
   expect(screen.getByText(/plots view/i)).toBeInTheDocument();
+  expect(screen.getByRole("note")).toHaveTextContent(/values are simulated except/i);
   expect(screen.getByRole("note")).toHaveTextContent(
-    /all values shown are simulated and are not real measurements/i
+    /platte lake \(big platte\) total phosphorus for 2020-2025/i
   );
 });
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { BrowserRouter as Router, Navigate, Route, Routes } from "react-router-dom";
 import PropTypes from "prop-types";
 import "./App.css";
@@ -11,6 +11,7 @@ import Plots from "./Plots";
 import MapPanel from "./MapPanel";
 import { upsertPlotConfig } from "./plots/plotConfigs";
 import { APP_TITLE, SUPPORT_CONTACT } from "./siteContent";
+import { measuredSiteNames } from "./utils/provenance";
 
 function FilterMapPanel({
   filters,
@@ -19,6 +20,7 @@ function FilterMapPanel({
   onUpdatePlot2,
   onDataLoaded,
   resetSignal,
+  measuredSites,
   trendSingleSite = false,
   updateEnabled = false,
 }) {
@@ -49,6 +51,7 @@ function FilterMapPanel({
         <MapPanel
           selectedSites={filters.selectedSites}
           onMarkerClick={handleMarkerClick}
+          measuredSites={measuredSites}
         />
       </section>
     </div>
@@ -68,6 +71,7 @@ FilterMapPanel.propTypes = {
   onUpdatePlot2: PropTypes.func.isRequired,
   onDataLoaded: PropTypes.func,
   resetSignal: PropTypes.number.isRequired,
+  measuredSites: PropTypes.instanceOf(Set),
   trendSingleSite: PropTypes.bool,
   updateEnabled: PropTypes.bool,
 };
@@ -198,6 +202,10 @@ function App() {
   const [updateEnabled, setUpdateEnabled] = useState(false);
   const [resetSignal, setResetSignal] = useState(0);
 
+  // Derived from the loaded rows rather than hardcoded, so the map labelling
+  // follows the CSV automatically as measured coverage grows.
+  const measuredSites = useMemo(() => measuredSiteNames(rawData || []), [rawData]);
+
   const onFiltersChange = useCallback((partialOrFull) => {
     setFilters((prev) => ({ ...prev, ...partialOrFull }));
   }, []);
@@ -277,6 +285,7 @@ function App() {
                       onUpdatePlot2={handleUpdatePlot2}
                       onDataLoaded={handleDataLoaded}
                       resetSignal={resetSignal}
+                      measuredSites={measuredSites}
                       trendSingleSite={false}
                       updateEnabled={updateEnabled}
                     />

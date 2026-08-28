@@ -1,8 +1,9 @@
 import { trackException } from "./telemetry";
 import { DEFAULT_DATA_REVALIDATE_AFTER_MS } from "../config/dataSources";
 
-// v3: info.csv gained a Unit column; bump forces revalidation of cached copies.
-const CSV_CACHE_PREFIX = "nwmiws:csv-cache:v3:";
+// v4: NWMIWS_Site_Data.csv gained a Provenance column and real Platte Lake
+// phosphorus values; bump forces revalidation of cached copies.
+const CSV_CACHE_PREFIX = "nwmiws:csv-cache:v4:";
 
 function cacheKeyFor(url) {
   return `${CSV_CACHE_PREFIX}${url}`;
