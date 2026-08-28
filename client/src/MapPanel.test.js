@@ -1,5 +1,6 @@
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
+import Papa from "papaparse";
 import MapPanel from "./MapPanel";
 import { fetchCachedCsvText } from "./utils/csvCache";
 
@@ -35,7 +36,11 @@ jest.mock("react-leaflet", () => {
       mockMapContainer(props);
       return ReactModule.createElement("div", { "data-testid": "map-container" }, children);
     },
-    Marker: ({ children }) => ReactModule.createElement("div", null, children),
+    // forwardRef: MapPanel attaches a ref to every Marker to drive popups, and
+    // a plain function component would warn on each one.
+    Marker: ReactModule.forwardRef(({ children }, ref) =>
+      ReactModule.createElement("div", { ref }, children)
+    ),
     Popup: ({ children }) => ReactModule.createElement("div", null, children),
   };
 });
@@ -86,6 +91,54 @@ describe("MapPanel", () => {
         tilesetId: "microsoft.base.road",
       })
     );
+  });
+
+  test("tells each marker apart by whether that site has real measurements", async () => {
+    // Someone clicking a marker sees only that site. The site-wide banner
+    // cannot tell them whether *this* lake's numbers are real, so the popup has
+    // to say so per site.
+    Papa.parse.mockImplementationOnce((_csvText, options) => {
+      options.complete({
+        data: [
+          { name: "Platte Lake (Big Platte)", latitude: "44.6911", longitude: "-86.0912" },
+          { name: "Bear Lake (Manistee)", latitude: "44.4406", longitude: "-86.1478" },
+        ],
+      });
+    });
+
+    render(
+      <MapPanel
+        selectedSites={[]}
+        onMarkerClick={jest.fn()}
+        measuredSites={new Set(["Platte Lake (Big Platte)"])}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Platte Lake (Big Platte)")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/includes real measurements/i)).toBeInTheDocument();
+    expect(screen.getByText(/simulated - not real measurements/i)).toBeInTheDocument();
+  });
+
+  test("labels every site simulated when no measured sites are supplied", async () => {
+    // Guards the default: if the prop never arrives, markers must not imply the
+    // data is real.
+    Papa.parse.mockImplementationOnce((_csvText, options) => {
+      options.complete({
+        data: [{ name: "Platte Lake (Big Platte)", latitude: "44.6911", longitude: "-86.0912" }],
+      });
+    });
+
+    render(<MapPanel selectedSites={[]} onMarkerClick={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Platte Lake (Big Platte)")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/simulated - not real measurements/i)).toBeInTheDocument();
+    expect(screen.queryByText(/includes real measurements/i)).not.toBeInTheDocument();
   });
 
   test("does not constrain panning with max bounds", () => {

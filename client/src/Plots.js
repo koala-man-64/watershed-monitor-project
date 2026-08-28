@@ -5,9 +5,11 @@ import {
   buildComparisonChart,
   buildTrendChart,
   defaultColors,
+  filterRowsForConfig,
 } from "./plots/chartBuilders";
 import { downloadPlotData } from "./plots/download";
 import { cycleTrendSite } from "./plots/plotConfigs";
+import { describeProvenance } from "./utils/provenance";
 
 function getParameterUnit(infoData, cfg) {
   const entry = cfg?.parameter && infoData ? infoData[cfg.parameter] : null;
@@ -44,6 +46,18 @@ function Plots({
   const chart2 = useMemo(
     () => buildChartForConfig(normalizedData, cfg2, unit2),
     [normalizedData, cfg2, unit2]
+  );
+
+  // Label each plot with the provenance of the rows it actually draws, so a
+  // measured series is never read as simulated (or the reverse) off the
+  // site-wide banner alone.
+  const notice1 = useMemo(
+    () => (cfg1 ? describeProvenance(filterRowsForConfig(normalizedData, cfg1)) : null),
+    [normalizedData, cfg1]
+  );
+  const notice2 = useMemo(
+    () => (cfg2 ? describeProvenance(filterRowsForConfig(normalizedData, cfg2)) : null),
+    [normalizedData, cfg2]
   );
 
   const handleTrendNavigation = (slot, step) => {
@@ -90,6 +104,7 @@ function Plots({
         chartObj={chart1}
         cfg={cfg1}
         slotLabel="Plot 1"
+        notice={notice1}
         onDownload={
           cfg1 ? () => downloadPlotData(normalizedData, cfg1) : undefined
         }
@@ -99,6 +114,7 @@ function Plots({
         chartObj={chart2}
         cfg={cfg2}
         slotLabel="Plot 2"
+        notice={notice2}
         onDownload={
           cfg2 ? () => downloadPlotData(normalizedData, cfg2) : undefined
         }

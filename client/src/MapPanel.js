@@ -45,7 +45,7 @@ const greenIcon = createMarkerIcon(MAP_MARKER_ASSETS.selected);
 const POPUP_CLOSE_DELAY_MS = 220;
 const FIXED_TILESET_ID = DEFAULT_AZURE_MAPS_TILESET_ID;
 
-function MapPanel({ selectedSites = [], onMarkerClick }) {
+function MapPanel({ selectedSites = [], onMarkerClick, measuredSites = null }) {
   const [allLocations, setAllLocations] = useState([]);
   const [isBaseLayerReady, setIsBaseLayerReady] = useState(false);
   const [mapError, setMapError] = useState("");
@@ -217,6 +217,12 @@ function MapPanel({ selectedSites = [], onMarkerClick }) {
                     onMouseLeave={() => scheduleClose(loc.name)}
                   >
                     <h3>{loc.name}</h3>
+                    <p className="map-site-provenance">
+                      <strong>Data:</strong>{" "}
+                      {measuredSites?.has(loc.name)
+                        ? "includes real measurements"
+                        : "simulated - not real measurements"}
+                    </p>
                     <p>
                       <strong>Size:</strong> {loc.size}
                     </p>
@@ -263,6 +269,7 @@ function MapPanel({ selectedSites = [], onMarkerClick }) {
 MapPanel.propTypes = {
   selectedSites: PropTypes.arrayOf(PropTypes.string).isRequired,
   onMarkerClick: PropTypes.func.isRequired,
+  measuredSites: PropTypes.instanceOf(Set),
 };
 
 export default MapPanel;

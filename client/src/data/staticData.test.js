@@ -48,6 +48,37 @@ describe("static data files", () => {
     expect(new Set(keys).size).toBe(rows.length);
   });
 
+  it("labels every row as measured or simulated", () => {
+    // The UI decides what to tell visitors from this column alone. A blank or
+    // unrecognised value would silently render as simulated, quietly
+    // mislabelling real data - so require an explicit, known value everywhere.
+    const values = [...new Set(rows.map((row) => row.Provenance))].sort();
+
+    expect(values.every((value) => ["measured", "simulated"].includes(value))).toBe(true);
+  });
+
+  it("marks the measured Platte phosphorus series and nothing else", () => {
+    const measured = rows.filter((row) => row.Provenance === "measured");
+
+    // Guards against a re-run of the ingest script quietly widening its blast
+    // radius: only this one site/parameter/year window is real today.
+    expect(
+      measured.every(
+        (row) =>
+          row.Site === "Platte Lake (Big Platte)" && row.Parameter === "Total Phosphorus"
+      )
+    ).toBe(true);
+
+    expect(measured.map((row) => row.Year).sort()).toEqual([
+      "2020",
+      "2021",
+      "2022",
+      "2023",
+      "2024",
+      "2025",
+    ]);
+  });
+
   it("has sane numerics on every row", () => {
     const bad = rows.filter((row) => {
       const max = Number(row.Max);
