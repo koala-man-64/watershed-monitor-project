@@ -23,8 +23,13 @@
   --color-bg: #f8fafc;           /* page background: very light blue/grey */
   --color-panel-bg: #ffffff;     /* card backgrounds: white */
   --color-border: #e5e7eb;       /* neutral border lines: light grey */
-  --panel-max-width: 760px;      /* max width for the left filter/map column */
-  --filters-min-width: 680px;    /* minimum width before filter layout should scroll */
+  /* Interactive controls need a heavier outline than card edges do, otherwise
+     the dropdowns read as flat text on the white filter panel. */
+  --color-control-border: #94a3b8; /* dropdown outlines: mid slate grey */
+  --panel-max-width: 860px;      /* max width for the left filter/map column */
+  /* Matches the summed minimums of .filters-controls plus its gaps and padding,
+     so the toolbar scrolls only once a control would actually be clipped. */
+  --filters-min-width: 826px;    /* minimum width before filter layout should scroll */
   
   /* new */
   --font-scale: 1.125; /* 1 = 100% baseline */
@@ -575,9 +580,19 @@ h1, h2, h3, h4,
   flex: 1 1 auto;
   min-width: 0;
   display: grid;
-  /* sites | start | end | parameter | chart type | actions */
+  /* sites | start | end | parameter | chart type | actions
+   *
+   * Minimums are measured from the longest value each control can show, so a
+   * selection is never clipped mid-word: "Total Phosphorus" needs 168px and
+   * "Comparison" needs 132px at the current font scale, while the year selects
+   * only ever hold four digits. A single shared minimum sized every column to
+   * the narrowest case and truncated the two widest ones. */
   grid-template-columns:
-    minmax(170px, 2fr) repeat(4, minmax(74px, 1fr)) minmax(112px, auto);
+    minmax(170px, 2fr)
+    repeat(2, minmax(80px, 0.7fr))
+    minmax(168px, 1.4fr)
+    minmax(132px, 1.1fr)
+    minmax(112px, auto);
   gap: 12px;
   align-items: end;
 }
@@ -620,12 +635,15 @@ h1, h2, h3, h4,
 .sms-toggle {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-control-border);
   border-radius: var(--radius);
   background: #fff;
   cursor: pointer;
   font-size: var(--font-size-base);
   color: var(--color-secondary);
+  /* Explicit so the heavier border eats into the control rather than widening
+     it past the grid column; form controls otherwise rely on UA defaults. */
+  box-sizing: border-box;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -966,7 +984,7 @@ h1, h2, h3, h4,
   align-items: center;
   padding: 8px 10px;
   border-radius: var(--radius);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-control-border);
   background: #fff;
   cursor: pointer;
   text-align: left;
@@ -1012,7 +1030,9 @@ h1, h2, h3, h4,
 .sms-panel,
 .sms-panel-overlay {
   margin-top: 0 !important;
-  border: 1px solid var(--color-border);
+  /* Matches the toggle it replaces when open, so the control does not appear
+     to shrink as the list expands. */
+  border: 2px solid var(--color-control-border);
   border-radius: var(--sms-radius);
   background: #fff;
   box-shadow: 0 8px 20px rgba(2, 6, 23, 0.12);
