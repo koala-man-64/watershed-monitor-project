@@ -1,0 +1,250 @@
+name: NWMIWS Deploy
+
+# One promotion pipeline. A merge to main validates the change, deploys it to
+# dev automatically, then stops and waits for a human before touching
+# production.
+#
+# The production gate is NOT enforced by anything in this file. It comes from
+# the `Production` GitHub environment, which carries a required-reviewer rule.
+# Deleting the `environment:` key from deploy_prod would silently remove the
+# gate and let merges ship straight to production again.
+#
+# This replaces the previous split dev/prod workflows, which keyed off separate
+# `dev` and `main` branches. The `dev` branch drifted nine commits behind main
+# and stopped reflecting what was live, so dev is now driven by main like
+# production is.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+
+jobs:
+  deploy_dev:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    name: Validate and Deploy to Dev
+    # Scoped per job rather than per workflow: a run parked on the production
+    # approval must not block the next merge from reaching dev.
+    concurrency:
+      group: swa-dev
+      cancel-in-progress: false
+    environment:
+      name: Development
+      url: https://nice-ocean-0f03a230f.6.azurestaticapps.net
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          lfs: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            client/package-lock.json
+            api/package-lock.json
+
+      - name: Install dependencies for Client
+        working-directory: ./client
+        run: npm ci
+
+      - name: Install dependencies for API
+        working-directory: ./api
+        run: npm ci
+
+      - name: Lint Client
+        working-directory: ./client
+        run: npm run lint
+
+      - name: Lint API
+        working-directory: ./api
+        run: npm run lint
+
+      - name: Test Client
+        working-directory: ./client
+        run: npm test -- --watchAll=false
+
+      - name: Test API
+        working-directory: ./api
+        run: npm test
+
+      - name: Build Client App
+        working-directory: ./client
+        run: npm run build
+
+      - name: Build And Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_NWMIWS_DEV }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
+          action: "upload"
+          ###### Repository/Build Configurations ######
+          app_location: "client/build"
+          api_location: "api"
+          output_location: ""
+          skip_app_build: true
+          ###### End of Repository/Build Configurations ######
+
+  deploy_prod:
+    # Only runs once dev is green, and then only once a reviewer approves it.
+    needs: deploy_dev
+    runs-on: ubuntu-latest
+    name: Deploy to Production
+    # This is the gate. The `Production` environment requires a reviewer, so the
+    # job sits in "Waiting" on the run page until it is approved or rejected.
+    environment:
+      name: Production
+      url: https://ambitious-coast-0a9902a1e.6.azurestaticapps.net
+    # Production deploys queue; they must never cancel one another. Two merges
+    # landing close together previously cancelled the in-flight main deploy and
+    # left production silently on the old build.
+    concurrency:
+      group: swa-prod
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          lfs: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            client/package-lock.json
+            api/package-lock.json
+
+      - name: Install dependencies for Client
+        working-directory: ./client
+        run: npm ci
+
+      - name: Install dependencies for API
+        working-directory: ./api
+        run: npm ci
+
+      # Lint and tests are deliberately not repeated here. deploy_dev already
+      # ran them against this exact commit, and this job cannot start unless
+      # that succeeded.
+      - name: Build Client App
+        working-directory: ./client
+        run: npm run build
+
+      - name: Build And Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_NWMIWS_PROD }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
+          action: "upload"
+          ###### Repository/Build Configurations ######
+          app_location: "client/build"
+          api_location: "api"
+          output_location: ""
+          skip_app_build: true
+          ###### End of Repository/Build Configurations ######
+
+  pr_preview:
+    # Preview builds for pull requests into main. These land as staging
+    # environments on the dev Static Web App, which on the Free tier allows
+    # only three at once - a fourth concurrent PR preview will fail to deploy.
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    name: Deploy PR Preview
+    concurrency:
+      group: swa-preview-${{ github.event.number }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          lfs: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            client/package-lock.json
+            api/package-lock.json
+
+      - name: Install dependencies for Client
+        working-directory: ./client
+        run: npm ci
+
+      - name: Install dependencies for API
+        working-directory: ./api
+        run: npm ci
+
+      - name: Lint Client
+        working-directory: ./client
+        run: npm run lint
+
+      - name: Lint API
+        working-directory: ./api
+        run: npm run lint
+
+      - name: Test Client
+        working-directory: ./client
+        run: npm test -- --watchAll=false
+
+      - name: Test API
+        working-directory: ./api
+        run: npm test
+
+      - name: Build Client App
+        working-directory: ./client
+        run: npm run build
+
+      - name: Build And Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_NWMIWS_DEV }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
+          action: "upload"
+          ###### Repository/Build Configurations ######
+          app_location: "client/build"
+          api_location: "api"
+          output_location: ""
+          skip_app_build: true
+          ###### End of Repository/Build Configurations ######
+
+  close_pull_request:
+    # Tears the PR's staging environment down again, so the three-slot Free tier
+    # limit is not consumed by merged or abandoned pull requests.
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Close Pull Request Preview
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Close Pull Request
+        id: closepullrequest
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_NWMIWS_DEV }}
+          action: "close"
+          app_location: "client"  # Added required parameter
