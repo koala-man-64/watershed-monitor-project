@@ -11,7 +11,7 @@ This README is split into two versions:
 
 ### What this application is
 
-The NW Michigan Water Quality Database is a web application for exploring water quality data for lakes in northern Michigan. It combines mapped site locations, historical measurements, charts, and downloadable data in one place.
+The NW Michigan Water Quality Database is a web application for exploring water quality data for lakes and streams in northern Michigan. It combines mapped site locations, historical measurements, charts, and downloadable data in one place.
 
 > **Note:** the deployed site currently serves synthetic demonstration data. All values shown in the application are simulated and are not real measurements. The application displays a persistent notice to this effect on every screen.
 

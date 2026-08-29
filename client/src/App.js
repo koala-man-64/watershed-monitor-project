@@ -99,8 +99,8 @@ function WelcomePanel({ onContinue }) {
             fontSize: "calc(1em * var(--font-scale, 1))",
           }}
         >
-          This demonstration site shows how water quality data for lakes in northern
-          Michigan can be retrieved, displayed, and downloaded. Click the markers on the
+          This demonstration site shows how water quality data for lakes and streams in
+          northern Michigan can be retrieved, displayed, and downloaded. Click the markers on the
           map or use the Sites list to see which sites are included.
         </p>
         <p
