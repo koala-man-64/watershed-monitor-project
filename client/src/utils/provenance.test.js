@@ -49,8 +49,11 @@ describe("describeProvenance", () => {
     expect(describeProvenance([measured("Platte", 2020)])).toMatch(/real laboratory measurements/i);
   });
 
-  it("warns plainly on an all-simulated plot", () => {
-    expect(describeProvenance([simulated("Bear", 2020)])).toMatch(/not real measurements/i);
+  it("stays silent on an all-simulated plot", () => {
+    // The site-wide banner already says everything is simulated by default, so
+    // repeating it per chart was noise. Only departures from that default get a
+    // notice.
+    expect(describeProvenance([simulated("Bear", 2020)])).toBeNull();
   });
 
   it("quantifies a mixed plot rather than rounding to one label", () => {

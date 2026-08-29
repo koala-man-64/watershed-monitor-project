@@ -13,9 +13,10 @@ export const PROVENANCE = Object.freeze({
 export const MEASURED_SERIES_SUMMARY =
   "Platte Lake (Big Platte) total phosphorus for 2020-2025";
 
+// "simulated except X" already carries that X is real, so the trailing
+// "which shows real measurements" was redundant and made the banner wrap.
 export const DEMO_NOTICE =
-  `Demonstration site — values are simulated except ${MEASURED_SERIES_SUMMARY}, ` +
-  "which shows real measurements.";
+  `Demonstration site — values are simulated except ${MEASURED_SERIES_SUMMARY}.`;
 
 // TODO: Replace this placeholder before the site is presented as anything other
 // than a demonstration. Fill in the confirmed public contact: a role or team
