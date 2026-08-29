@@ -43,7 +43,13 @@ export function describeProvenance(rows = []) {
   }
 
   if (measured === 0) {
-    return "Simulated data — these values are illustrative and are not real measurements.";
+    // Deliberately silent. Almost every chart is fully simulated, so a per-chart
+    // notice repeated the site-wide banner on screen after screen without
+    // telling the reader anything it had not already said. The banner is
+    // permanent and non-dismissible, so the disclosure is not lost by omitting
+    // it here — only the cases below, where a chart differs from that default,
+    // are worth calling out.
+    return null;
   }
 
   return (
