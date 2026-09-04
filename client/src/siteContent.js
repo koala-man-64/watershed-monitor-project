@@ -1,17 +1,23 @@
 export const APP_TITLE = "NW Michigan Water Quality Database";
 
 // Row-level `Provenance` values in NWMIWS_Site_Data.csv. Written by
-// scripts/data/ingest_platte_tp.py; see data/source/README.md.
+// scripts/data/ingest_measured_samples.py; see data/source/README.md.
 export const PROVENANCE = Object.freeze({
   MEASURED: "measured",
   SIMULATED: "simulated",
 });
 
-// The one real series currently in the dataset. Keep this in step with whatever
+// The real series currently in the dataset. Keep this in step with whatever
 // the ingest script marks `measured` — the banner below names it explicitly so
-// visitors are never left to assume the rest is real too.
+// visitors are never left to assume the rest is real too. Coverage varies by
+// site, parameter and year (see data/source/README.md); this names what's
+// real without implying every year or every parameter is covered uniformly —
+// per-chart precision is handled separately by describeProvenance.
 export const MEASURED_SERIES_SUMMARY =
-  "Platte Lake (Big Platte) total phosphorus for 2020-2025";
+  "Platte Lake (Big Platte) and the seven Leelanau Conservancy lakes " +
+  "(Big & Little Glen, Cedar, Lime, Little Traverse, and North & South Lake " +
+  "Leelanau) — total phosphorus, nitrate, chlorophyll-a, and Secchi depth " +
+  "across most of their historical record";
 
 // "simulated except X" already carries that X is real, so the trailing
 // "which shows real measurements" was redundant and made the banner wrap.
