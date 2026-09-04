@@ -153,7 +153,7 @@ test("the demonstration notice is visible on the welcome view and the plots view
   // would be wrong, and staying silent about the rest would be worse.
   expect(screen.getByRole("note")).toHaveTextContent(/values are simulated except/i);
   expect(screen.getByRole("note")).toHaveTextContent(
-    /platte lake \(big platte\) total phosphorus for 2020-2025/i
+    /platte lake \(big platte\) and the seven leelanau conservancy lakes/i
   );
 
   fireEvent.click(screen.getByRole("button", { name: /continue/i }));
@@ -161,7 +161,7 @@ test("the demonstration notice is visible on the welcome view and the plots view
   expect(screen.getByText(/plots view/i)).toBeInTheDocument();
   expect(screen.getByRole("note")).toHaveTextContent(/values are simulated except/i);
   expect(screen.getByRole("note")).toHaveTextContent(
-    /platte lake \(big platte\) total phosphorus for 2020-2025/i
+    /platte lake \(big platte\) and the seven leelanau conservancy lakes/i
   );
 });
 

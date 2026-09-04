@@ -38,14 +38,27 @@ describe("static data files", () => {
     expect([...new Set(rows.map((row) => row.Parameter))].sort()).toEqual(PARAMETERS);
   });
 
-  it("is a complete site x parameter x year grid with no duplicates", () => {
-    const years = new Set(rows.map((row) => row.Year));
-    const sites = new Set(rows.map((row) => row.Site));
-
-    expect(rows).toHaveLength(sites.size * PARAMETERS.length * years.size);
-
+  it("has no duplicate site x parameter x year rows", () => {
     const keys = rows.map((row) => `${row.Site}|${row.Parameter}|${row.Year}`);
     expect(new Set(keys).size).toBe(rows.length);
+  });
+
+  it("is a complete site x parameter x year grid for every site with no measured data", () => {
+    // A measured site's coverage is whatever real samples exist for it - real
+    // records are ragged by nature (a parameter added partway through, a
+    // series that stops early) and are asserted individually below. A site
+    // with no measured data at all has no such excuse: it is entirely
+    // synthetic filler, so a gap there would mean the generator silently
+    // dropped a year, not that a limnologist didn't sample that year.
+    const measuredSites = new Set(
+      rows.filter((row) => row.Provenance === "measured").map((row) => row.Site)
+    );
+    const simulatedOnly = rows.filter((row) => !measuredSites.has(row.Site));
+
+    const years = new Set(simulatedOnly.map((row) => row.Year));
+    const sites = new Set(simulatedOnly.map((row) => row.Site));
+
+    expect(simulatedOnly).toHaveLength(sites.size * PARAMETERS.length * years.size);
   });
 
   it("labels every row as measured or simulated", () => {
@@ -57,26 +70,28 @@ describe("static data files", () => {
     expect(values.every((value) => ["measured", "simulated"].includes(value))).toBe(true);
   });
 
-  it("marks the measured Platte phosphorus series and nothing else", () => {
-    const measured = rows.filter((row) => row.Provenance === "measured");
-
-    // Guards against a re-run of the ingest script quietly widening its blast
-    // radius: only this one site/parameter/year window is real today.
-    expect(
-      measured.every(
-        (row) =>
-          row.Site === "Platte Lake (Big Platte)" && row.Parameter === "Total Phosphorus"
-      )
-    ).toBe(true);
-
-    expect(measured.map((row) => row.Year).sort()).toEqual([
-      "2020",
-      "2021",
-      "2022",
-      "2023",
-      "2024",
-      "2025",
+  it("marks exactly Platte and the seven Leelanau Conservancy lakes as measured", () => {
+    // Guards against a re-run of the ingest script quietly widening or
+    // narrowing its blast radius: these 8 sites (Ray's 2026-09-04
+    // delete-and-replace) should be measured everywhere they have a row, and
+    // no other site should ever be measured.
+    const REAL_DATA_SITES = new Set([
+      "Platte Lake (Big Platte)",
+      "Big Glen Lake",
+      "Little Glen Lake",
+      "Little Traverse Lake",
+      "Lime Lake",
+      "Cedar Lake (Leelanau)",
+      "North Lake Leelanau",
+      "South Lake Leelanau",
     ]);
+
+    const forRealSites = rows.filter((row) => REAL_DATA_SITES.has(row.Site));
+    const forOtherSites = rows.filter((row) => !REAL_DATA_SITES.has(row.Site));
+
+    expect(forRealSites.length).toBeGreaterThan(0);
+    expect(forRealSites.every((row) => row.Provenance === "measured")).toBe(true);
+    expect(forOtherSites.every((row) => row.Provenance === "simulated")).toBe(true);
   });
 
   it("has sane numerics on every row", () => {

@@ -57,10 +57,17 @@ def read_sources(paths):
 
 def summarize(values):
     """Collapse a year of samples into the columns the site renders."""
+    lo = min(values)
+    hi = max(values)
+    # sum(values) / len(values) can land a few ULPs outside [lo, hi] when
+    # every sample is identical (e.g. six 3.8 readings averaging to
+    # 3.7999999999999994) - clamp rather than let a floating-point artifact
+    # violate min <= avg <= max on an otherwise-correct row.
+    avg = min(max(sum(values) / len(values), lo), hi)
     return {
-        "Max": max(values),
-        "Min": min(values),
-        "Avg": sum(values) / len(values),
+        "Max": hi,
+        "Min": lo,
+        "Avg": avg,
         "Count": len(values),
     }
 
