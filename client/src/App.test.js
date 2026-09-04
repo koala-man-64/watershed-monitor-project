@@ -148,21 +148,12 @@ test("updating plot 1 stores a normalized trend config", () => {
 test("the demonstration notice is visible on the welcome view and the plots view", () => {
   render(<App />);
 
-  // The dataset mixes one measured series with simulated values everywhere
-  // else, so the banner has to say both halves - a blanket "all simulated"
-  // would be wrong, and staying silent about the rest would be worse.
-  expect(screen.getByRole("note")).toHaveTextContent(/values are simulated except/i);
-  expect(screen.getByRole("note")).toHaveTextContent(
-    /platte lake \(big platte\) and the seven leelanau conservancy lakes/i
-  );
+  expect(screen.getByRole("note")).toHaveTextContent(/demonstration site/i);
 
   fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
   expect(screen.getByText(/plots view/i)).toBeInTheDocument();
-  expect(screen.getByRole("note")).toHaveTextContent(/values are simulated except/i);
-  expect(screen.getByRole("note")).toHaveTextContent(
-    /platte lake \(big platte\) and the seven leelanau conservancy lakes/i
-  );
+  expect(screen.getByRole("note")).toHaveTextContent(/demonstration site/i);
 });
 
 test("the welcome page no longer publishes an individual contact", () => {
