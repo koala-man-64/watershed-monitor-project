@@ -10,7 +10,11 @@ import {
 import { downloadPlotData } from "./plots/download";
 import { cycleTrendSite } from "./plots/plotConfigs";
 import { describeProvenance } from "./utils/provenance";
-import { applyOutlierView, describeOutlierView } from "./utils/outliers";
+import {
+  applyOutlierView,
+  countExcludedSamples,
+  describeOutlierView,
+} from "./utils/outliers";
 
 function getParameterUnit(infoData, cfg) {
   const entry = cfg?.parameter && infoData ? infoData[cfg.parameter] : null;
@@ -57,37 +61,60 @@ function Plots({
 }) {
   const cfg1 = plotConfigs[0] || null;
   const cfg2 = plotConfigs[1] || null;
-  // Off by default. The samples are real readings until someone with the raw
+  // Per slot, like the counts toggle beside it: the two panels routinely plot
+  // different parameters, and only one of them may have anything flagged.
+  //
+  // Both start off. The samples are real readings until someone with the raw
   // record says otherwise, so hiding them has to be the reader's choice rather
   // than something the site does quietly on their behalf.
-  const [excludeOutliers, setExcludeOutliers] = useState(false);
+  const [excludeOutliers, setExcludeOutliers] = useState([false, false]);
   const sourceData = Array.isArray(rawData) ? rawData : [];
-  const normalizedData = useMemo(
-    () => applyOutlierView(sourceData, excludeOutliers),
+
+  const toggleOutliers = (slot) =>
+    setExcludeOutliers((prev) => prev.map((value, index) => (index === slot ? !value : value)));
+
+  const viewData1 = useMemo(
+    () => applyOutlierView(sourceData, excludeOutliers[0]),
     [sourceData, excludeOutliers]
   );
+  const viewData2 = useMemo(
+    () => applyOutlierView(sourceData, excludeOutliers[1]),
+    [sourceData, excludeOutliers]
+  );
+
+  // Counted from the source rows, so the icon still reports what is there
+  // after those rows have been excluded from the plotted set.
+  const outlierCount1 = useMemo(
+    () => (cfg1 ? countExcludedSamples(filterRowsForConfig(sourceData, cfg1)) : 0),
+    [sourceData, cfg1]
+  );
+  const outlierCount2 = useMemo(
+    () => (cfg2 ? countExcludedSamples(filterRowsForConfig(sourceData, cfg2)) : 0),
+    [sourceData, cfg2]
+  );
+
   const unit1 = getParameterUnit(infoData, cfg1);
   const unit2 = getParameterUnit(infoData, cfg2);
 
   const chart1 = useMemo(
-    () => buildChartForConfig(normalizedData, cfg1, unit1),
-    [normalizedData, cfg1, unit1]
+    () => buildChartForConfig(viewData1, cfg1, unit1),
+    [viewData1, cfg1, unit1]
   );
   const chart2 = useMemo(
-    () => buildChartForConfig(normalizedData, cfg2, unit2),
-    [normalizedData, cfg2, unit2]
+    () => buildChartForConfig(viewData2, cfg2, unit2),
+    [viewData2, cfg2, unit2]
   );
 
   // Label each plot with the provenance of the rows it actually draws, so a
   // measured series is never read as simulated (or the reverse) off the
   // site-wide banner alone.
   const notice1 = useMemo(
-    () => buildNotice(normalizedData, sourceData, cfg1, excludeOutliers),
-    [normalizedData, sourceData, cfg1, excludeOutliers]
+    () => buildNotice(viewData1, sourceData, cfg1, excludeOutliers[0]),
+    [viewData1, sourceData, cfg1, excludeOutliers]
   );
   const notice2 = useMemo(
-    () => buildNotice(normalizedData, sourceData, cfg2, excludeOutliers),
-    [normalizedData, sourceData, cfg2, excludeOutliers]
+    () => buildNotice(viewData2, sourceData, cfg2, excludeOutliers[1]),
+    [viewData2, sourceData, cfg2, excludeOutliers]
   );
 
   const handleTrendNavigation = (slot, step) => {
@@ -130,40 +157,27 @@ function Plots({
       className="plots-container"
       style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}
     >
-      <div className="plots-toolbar">
-        <label className="outlier-toggle">
-          <input
-            type="checkbox"
-            checked={excludeOutliers}
-            onChange={(event) => setExcludeOutliers(event.target.checked)}
-          />
-          <span>Exclude statistical outliers</span>
-        </label>
-        <span className="outlier-toggle-help">
-          Samples far outside their own lake and parameter&apos;s range. Flagged when the
-          data is prepared, not recalculated here.
-        </span>
-      </div>
-
       <ChartPanel
         chartObj={chart1}
         cfg={cfg1}
         slotLabel="Plot 1"
         notice={notice1}
-        onDownload={
-          cfg1 ? () => downloadPlotData(normalizedData, cfg1) : undefined
-        }
+        onDownload={cfg1 ? () => downloadPlotData(viewData1, cfg1) : undefined}
         nav={getNavigationProps(cfg1, 0)}
+        excludeOutliers={excludeOutliers[0]}
+        outlierCount={outlierCount1}
+        onToggleOutliers={() => toggleOutliers(0)}
       />
       <ChartPanel
         chartObj={chart2}
         cfg={cfg2}
         slotLabel="Plot 2"
         notice={notice2}
-        onDownload={
-          cfg2 ? () => downloadPlotData(normalizedData, cfg2) : undefined
-        }
+        onDownload={cfg2 ? () => downloadPlotData(viewData2, cfg2) : undefined}
         nav={getNavigationProps(cfg2, 1)}
+        excludeOutliers={excludeOutliers[1]}
+        outlierCount={outlierCount2}
+        onToggleOutliers={() => toggleOutliers(1)}
       />
     </div>
   );
