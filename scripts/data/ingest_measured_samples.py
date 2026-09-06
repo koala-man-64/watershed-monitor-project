@@ -26,6 +26,7 @@ it always rebuilds a site's block from scratch rather than accumulating.
 import argparse
 import csv
 import glob
+import math
 import os
 import sys
 from collections import defaultdict
@@ -37,6 +38,42 @@ TARGET = os.path.join(REPO_ROOT, "client", "public", "data", "NWMIWS_Site_Data.c
 PROVENANCE_COLUMN = "Provenance"
 MEASURED = "measured"
 SIMULATED = "simulated"
+
+# Columns carrying the same yearly summary with outlier samples excluded, so
+# the site can offer both views without the browser needing sample-level data.
+OUTLIER_COLUMNS = [
+    "MaxExOutliers",
+    "MinExOutliers",
+    "AvgExOutliers",
+    "CountExOutliers",
+    "OutliersRemoved",
+]
+
+# Outlier rule: Tukey's fence on log10 values, applied per (site, parameter)
+# series across all its years.
+#
+# Log scale because nutrient concentrations are right-skewed - a fence on raw
+# values treats an ordinary late-summer phosphorus reading on a clear lake
+# (12-18 ug/L against a median of 4) as an outlier, which discards real
+# seasonal signal rather than errors.
+#
+# The outer multiplier (3.0, "far out") rather than the usual 1.5: at 1.5 the
+# rule flags 58 samples including legitimate spring nitrate peaks, at 3.0 it
+# flags 6 - the values that stand apart from their own series rather than the
+# upper end of it.
+OUTLIER_IQR_MULTIPLIER = 3.0
+
+# Secchi Depth is deliberately excluded. It measures water clarity, not a
+# concentration: its high tail is the clearest days on record (North Lake
+# Leelanau's best-ever 41 ft reading), so an upper fence would discard the
+# best data as though it were error. Nothing in the record suggests a Secchi
+# transcription problem to detect, and inventing a rule for one would be
+# speculative.
+OUTLIER_PARAMETERS = frozenset({"Total Phosphorus", "Nitrate", "Chlorophyll-a"})
+
+# Quartiles from a handful of points are noise. Every current series has 118+
+# samples, so this only guards future sources with a thin record.
+MIN_SAMPLES_FOR_FENCE = 12
 
 
 def read_sources(paths):
@@ -72,6 +109,70 @@ def summarize(values):
     }
 
 
+def quantile(sorted_values, fraction):
+    """Linear-interpolation quantile, matching the usual boxplot convention."""
+    position = (len(sorted_values) - 1) * fraction
+    lower = int(position)
+    upper = min(lower + 1, len(sorted_values) - 1)
+    return sorted_values[lower] + (sorted_values[upper] - sorted_values[lower]) * (position - lower)
+
+
+def outlier_fence(parameter, values):
+    """Upper cutoff above which a sample counts as an outlier, or None.
+
+    None means "do not judge this series": a parameter the rule deliberately
+    ignores, too few samples for stable quartiles, or too few positive values
+    to work on a log scale. Callers must treat None as "no outliers", never as
+    a fence of zero.
+    """
+    if parameter not in OUTLIER_PARAMETERS or len(values) < MIN_SAMPLES_FOR_FENCE:
+        return None
+
+    # A zero reading is real data (and kept in the series), but log10(0) is
+    # undefined, so the fence is derived from the positive values only.
+    positive = sorted(math.log10(value) for value in values if value > 0)
+    if len(positive) < MIN_SAMPLES_FOR_FENCE:
+        return None
+
+    q1 = quantile(positive, 0.25)
+    q3 = quantile(positive, 0.75)
+    return 10 ** (q3 + OUTLIER_IQR_MULTIPLIER * (q3 - q1))
+
+
+def split_outliers(values, fence):
+    """Partition a year's samples into (kept, removed) against the fence."""
+    if fence is None:
+        return list(values), []
+    kept = [value for value in values if value <= fence]
+    removed = [value for value in values if value > fence]
+    return kept, removed
+
+
+def backfill_outlier_columns(row):
+    """Give a row this script did not rebuild the outlier columns anyway.
+
+    Rows for sites with no source file (today: the simulated ones) are carried
+    through untouched, but the file has to stay rectangular. No sample-level
+    data exists for them, so nothing was examined and nothing was removed -
+    the outlier-free view is simply the row itself.
+    """
+    filled = dict(row)
+    filled.setdefault("MaxExOutliers", row.get("Max", ""))
+    filled.setdefault("MinExOutliers", row.get("Min", ""))
+    filled.setdefault("AvgExOutliers", row.get("Avg", ""))
+    filled.setdefault("CountExOutliers", row.get("Count", ""))
+    filled.setdefault("OutliersRemoved", 0)
+    for column in OUTLIER_COLUMNS:
+        if filled.get(column) in (None, ""):
+            if column == "OutliersRemoved":
+                filled[column] = 0
+            elif column == "CountExOutliers":
+                filled[column] = row.get("Count", "")
+            else:
+                filled[column] = row.get(column.replace("ExOutliers", ""), "")
+    return filled
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true", help="report without writing")
@@ -94,14 +195,31 @@ def main():
         fieldnames = list(reader.fieldnames or [])
         rows = list(reader)
 
-    if PROVENANCE_COLUMN not in fieldnames:
-        fieldnames.append(PROVENANCE_COLUMN)
+    for column in OUTLIER_COLUMNS:
+        if column not in fieldnames:
+            fieldnames.append(column)
+    # Provenance stays the last column: it labels the row, the outlier columns
+    # are part of the summary that precedes it.
+    if PROVENANCE_COLUMN in fieldnames:
+        fieldnames.remove(PROVENANCE_COLUMN)
+    fieldnames.append(PROVENANCE_COLUMN)
 
     # Build the replacement rows for every (site, parameter, year) with samples.
     new_rows = []
+    outlier_log = []
     for (site, parameter), by_year in sorted(by_key.items()):
+        # One fence per series, derived from every year at once - a single
+        # year rarely holds enough samples for a stable quartile.
+        all_values = [value for values in by_year.values() for value in values]
+        fence = outlier_fence(parameter, all_values)
+
         for year, values in sorted(by_year.items()):
             summary = summarize(values)
+            kept, removed = split_outliers(values, fence)
+            clean = summarize(kept) if kept else None
+            for value in sorted(removed, reverse=True):
+                outlier_log.append((site, parameter, year, value, fence))
+
             new_rows.append({
                 "Site": site,
                 "SiteType": "Lake",
@@ -111,6 +229,14 @@ def main():
                 "Min": repr(summary["Min"]),
                 "Avg": repr(summary["Avg"]),
                 "Count": summary["Count"],
+                # A year whose every sample was an outlier has no honest
+                # summary to show: the count is 0 and the stats stay blank, so
+                # the site drops the row rather than plotting a hollow point.
+                "MaxExOutliers": repr(clean["Max"]) if clean else "",
+                "MinExOutliers": repr(clean["Min"]) if clean else "",
+                "AvgExOutliers": repr(clean["Avg"]) if clean else "",
+                "CountExOutliers": clean["Count"] if clean else 0,
+                "OutliersRemoved": len(removed),
                 PROVENANCE_COLUMN: MEASURED,
             })
 
@@ -126,7 +252,7 @@ def main():
     inserted_sites = set()
     for row in rows:
         if row["Site"] not in sites_in_scope:
-            result.append(row)
+            result.append(backfill_outlier_columns(row))
             continue
         if row["Site"] not in inserted_sites:
             result.extend(new_rows_by_site[row["Site"]])
@@ -145,6 +271,17 @@ def main():
 
     print("\n%d existing row(s) removed across %d site(s); %d new measured row(s) written"
           % (removed_count, len(sites_in_scope), len(new_rows)))
+
+    if outlier_log:
+        print("")
+        print("%d sample(s) flagged as outliers (log10 Tukey fence, k=%s):"
+              % (len(outlier_log), OUTLIER_IQR_MULTIPLIER))
+        for site, parameter, year, value, fence in sorted(outlier_log):
+            print("  %-26s %-17s %s  %10.4g  (fence %.4g)"
+                  % (site, parameter, year, value, fence))
+    else:
+        print("")
+        print("no samples flagged as outliers")
 
     if args.check:
         print("--check: nothing written")

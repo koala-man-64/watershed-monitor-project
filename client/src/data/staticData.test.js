@@ -94,6 +94,87 @@ describe("static data files", () => {
     expect(forOtherSites.every((row) => row.Provenance === "simulated")).toBe(true);
   });
 
+  it("carries an outlier-free summary on every row", () => {
+    // The site swaps whole column sets at once (see utils/outliers.js), so a
+    // row missing any one of them silently disappears from the outlier-free
+    // view instead of failing loudly here.
+    const columns = [
+      "MaxExOutliers",
+      "MinExOutliers",
+      "AvgExOutliers",
+      "CountExOutliers",
+      "OutliersRemoved",
+    ];
+    const missing = rows.filter((row) =>
+      columns.some((column) => row[column] === undefined)
+    );
+
+    expect(missing).toEqual([]);
+  });
+
+  it("accounts for every sample as either kept or removed", () => {
+    // Count = CountExOutliers + OutliersRemoved on every row, measured or not.
+    // A row that loses samples without recording them is the failure mode that
+    // would let the two views disagree about how much data exists.
+    const unbalanced = rows.filter((row) => {
+      const kept = Number(row.CountExOutliers);
+      const removed = Number(row.OutliersRemoved);
+      return !Number.isInteger(kept) || !Number.isInteger(removed)
+        || kept + removed !== Number(row.Count);
+    });
+
+    expect(unbalanced).toEqual([]);
+  });
+
+  it("has sane numerics on every outlier-free summary", () => {
+    const bad = rows.filter((row) => {
+      const kept = Number(row.CountExOutliers);
+
+      if (kept === 0) {
+        // Nothing left to summarise: the stats must be blank, not zero, so the
+        // site drops the row rather than plotting it at the origin.
+        return row.MaxExOutliers !== "" || row.MinExOutliers !== "" || row.AvgExOutliers !== "";
+      }
+
+      const max = Number(row.MaxExOutliers);
+      const min = Number(row.MinExOutliers);
+      const avg = Number(row.AvgExOutliers);
+
+      return (
+        !Number.isFinite(max) ||
+        !Number.isFinite(min) ||
+        !Number.isFinite(avg) ||
+        !(min <= avg && avg <= max)
+      );
+    });
+
+    expect(bad).toEqual([]);
+  });
+
+  it("only ever lowers an average by excluding outliers", () => {
+    // The fence is one-sided (an upper cutoff), so dropping samples can only
+    // pull an average down. A row that rose would mean the ingest removed
+    // something from the bottom of the series - the opposite of the rule.
+    const raised = rows
+      .filter((row) => Number(row.OutliersRemoved) > 0)
+      .filter((row) => Number(row.AvgExOutliers) >= Number(row.Avg));
+
+    expect(raised).toEqual([]);
+  });
+
+  it("never flags a Secchi Depth or simulated sample as an outlier", () => {
+    // Secchi is water clarity, not a concentration: its high tail is the
+    // clearest days on record, so the ingest deliberately leaves it alone.
+    // Simulated rows have no samples to judge in the first place.
+    const wrong = rows.filter(
+      (row) =>
+        Number(row.OutliersRemoved) > 0 &&
+        (row.Parameter === "Secchi Depth" || row.Provenance !== "measured")
+    );
+
+    expect(wrong).toEqual([]);
+  });
+
   it("has sane numerics on every row", () => {
     const bad = rows.filter((row) => {
       const max = Number(row.Max);
