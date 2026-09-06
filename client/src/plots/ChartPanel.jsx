@@ -786,6 +786,14 @@ function IconWithTooltip({ icon, label, onClick, active = false, disabled = fals
       onMouseLeave={() => setOpen(false)}
       onFocus={() => setOpen(true)}
       onBlur={() => setOpen(false)}
+      // Colour carries the on/off state and opacity only marks "you cannot use
+      // this" - opacity alone cannot do both, since widening the gap enough to
+      // see makes an available control look disabled. The colours live in
+      // `.plot-icons svg` in App.css rather than here: that rule targets the
+      // icon directly, so a colour set on this wrapper is never inherited.
+      className={`plot-icon${active ? " plot-icon-active" : ""}${
+        disabled ? " plot-icon-disabled" : ""
+      }`}
       style={{
         position: "relative",
         display: "inline-flex",
@@ -794,7 +802,7 @@ function IconWithTooltip({ icon, label, onClick, active = false, disabled = fals
         width: 22,
         height: 22,
         cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.45 : active ? 1 : 0.9,
+        opacity: disabled ? 0.4 : 1,
       }}
     >
       <FontAwesomeIcon icon={icon} />
