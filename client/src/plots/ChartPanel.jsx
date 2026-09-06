@@ -7,6 +7,7 @@ import {
   faArrowLeft,
   faArrowRight,
   faDownload,
+  faFilter,
   faHashtag,
 } from "@fortawesome/free-solid-svg-icons";
 import { getNoDataMessage, getUnconfiguredPlotMessage } from "../utils/plotEmptyState";
@@ -854,7 +855,17 @@ IconWithTooltip.defaultProps = {
   disabled: false,
 };
 
-function ChartPanel({ chartObj, cfg, slotLabel, notice, onDownload, nav }) {
+function ChartPanel({
+  chartObj,
+  cfg,
+  slotLabel,
+  notice,
+  onDownload,
+  nav,
+  excludeOutliers,
+  outlierCount,
+  onToggleOutliers,
+}) {
   const [containerRef, size] = useElementSize();
   const [showCounts, setShowCounts] = useState(false);
 
@@ -902,6 +913,16 @@ function ChartPanel({ chartObj, cfg, slotLabel, notice, onDownload, nav }) {
     : `${slotLabel}${cfg?.parameter ? `: ${cfg.parameter}` : ""}`;
   const headerTitle =
     titleText.length > 80 ? `${titleText.slice(0, 79)}...` : titleText;
+
+  // Disabled rather than hidden when a chart has nothing flagged: a control
+  // that appears and vanishes between parameters is harder to trust than one
+  // that is always there and greyed out.
+  const outlierLabel =
+    outlierCount === 0
+      ? "No outliers in this chart"
+      : excludeOutliers
+        ? "Include statistical outliers"
+        : "Exclude statistical outliers";
 
   const buildDownloadIcon = () =>
     onDownload ? (
@@ -1018,6 +1039,13 @@ function ChartPanel({ chartObj, cfg, slotLabel, notice, onDownload, nav }) {
         <div className="plot-icons" style={{ display: "flex", gap: 12, alignItems: "center", opacity: 0.9 }}>
           {buildDownloadIcon()}
           <IconWithTooltip
+            icon={faFilter}
+            label={outlierLabel}
+            onClick={onToggleOutliers}
+            active={excludeOutliers}
+            disabled={outlierCount === 0 || typeof onToggleOutliers !== "function"}
+          />
+          <IconWithTooltip
             icon={faHashtag}
             label={showCounts ? "Hide counts" : "Show counts"}
             onClick={() => setShowCounts((prev) => !prev)}
@@ -1081,6 +1109,9 @@ ChartPanel.propTypes = {
     next: PropTypes.func,
     hasMultipleSites: PropTypes.bool,
   }),
+  excludeOutliers: PropTypes.bool,
+  outlierCount: PropTypes.number,
+  onToggleOutliers: PropTypes.func,
 };
 
 ChartPanel.defaultProps = {
@@ -1089,6 +1120,9 @@ ChartPanel.defaultProps = {
   notice: null,
   onDownload: undefined,
   nav: null,
+  excludeOutliers: false,
+  outlierCount: 0,
+  onToggleOutliers: undefined,
 };
 
 export default ChartPanel;
