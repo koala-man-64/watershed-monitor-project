@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import ChartPanel from "./plots/ChartPanel";
 import {
@@ -10,10 +10,32 @@ import {
 import { downloadPlotData } from "./plots/download";
 import { cycleTrendSite } from "./plots/plotConfigs";
 import { describeProvenance } from "./utils/provenance";
+import { applyOutlierView, describeOutlierView } from "./utils/outliers";
 
 function getParameterUnit(infoData, cfg) {
   const entry = cfg?.parameter && infoData ? infoData[cfg.parameter] : null;
   return entry?.Unit ? String(entry.Unit).trim() : "";
+}
+
+/**
+ * One sentence under a chart covering both where its values came from and what
+ * the outlier setting did to them.
+ *
+ * The outlier half counts from `sourceData` rather than the plotted rows: a row
+ * excluded outright takes its own flag count with it, and "0 excluded" is
+ * exactly the wrong thing to tell someone who just excluded something.
+ */
+function buildNotice(plottedRows, sourceRows, cfg, excludeOutliers) {
+  if (!cfg) {
+    return null;
+  }
+
+  const parts = [
+    describeProvenance(filterRowsForConfig(plottedRows, cfg)),
+    describeOutlierView(filterRowsForConfig(sourceRows, cfg), excludeOutliers),
+  ].filter(Boolean);
+
+  return parts.length ? parts.join(" ") : null;
 }
 
 function buildChartForConfig(rawData, cfg, unit) {
@@ -35,7 +57,15 @@ function Plots({
 }) {
   const cfg1 = plotConfigs[0] || null;
   const cfg2 = plotConfigs[1] || null;
-  const normalizedData = Array.isArray(rawData) ? rawData : [];
+  // Off by default. The samples are real readings until someone with the raw
+  // record says otherwise, so hiding them has to be the reader's choice rather
+  // than something the site does quietly on their behalf.
+  const [excludeOutliers, setExcludeOutliers] = useState(false);
+  const sourceData = Array.isArray(rawData) ? rawData : [];
+  const normalizedData = useMemo(
+    () => applyOutlierView(sourceData, excludeOutliers),
+    [sourceData, excludeOutliers]
+  );
   const unit1 = getParameterUnit(infoData, cfg1);
   const unit2 = getParameterUnit(infoData, cfg2);
 
@@ -52,12 +82,12 @@ function Plots({
   // measured series is never read as simulated (or the reverse) off the
   // site-wide banner alone.
   const notice1 = useMemo(
-    () => (cfg1 ? describeProvenance(filterRowsForConfig(normalizedData, cfg1)) : null),
-    [normalizedData, cfg1]
+    () => buildNotice(normalizedData, sourceData, cfg1, excludeOutliers),
+    [normalizedData, sourceData, cfg1, excludeOutliers]
   );
   const notice2 = useMemo(
-    () => (cfg2 ? describeProvenance(filterRowsForConfig(normalizedData, cfg2)) : null),
-    [normalizedData, cfg2]
+    () => buildNotice(normalizedData, sourceData, cfg2, excludeOutliers),
+    [normalizedData, sourceData, cfg2, excludeOutliers]
   );
 
   const handleTrendNavigation = (slot, step) => {
@@ -100,6 +130,21 @@ function Plots({
       className="plots-container"
       style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}
     >
+      <div className="plots-toolbar">
+        <label className="outlier-toggle">
+          <input
+            type="checkbox"
+            checked={excludeOutliers}
+            onChange={(event) => setExcludeOutliers(event.target.checked)}
+          />
+          <span>Exclude statistical outliers</span>
+        </label>
+        <span className="outlier-toggle-help">
+          Samples far outside their own lake and parameter&apos;s range. Flagged when the
+          data is prepared, not recalculated here.
+        </span>
+      </div>
+
       <ChartPanel
         chartObj={chart1}
         cfg={cfg1}

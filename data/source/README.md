@@ -70,7 +70,7 @@ micrograms/litre; feet used as-is).
   - Two `CHLRPHYLA` rows had a blank Units cell; both were in the same
     magnitude as the surrounding mg/L rows and were treated as mg/L.
 
-### Known data-quality anomaly — not scrubbed
+### Known data-quality anomaly — flagged, not scrubbed
 
 A handful of Nitrate readings are far outside the series' own range: most
 Nitrate samples fall under ~300 µg/L, but a few reach 920-6250 µg/L
@@ -81,6 +81,50 @@ these values were extracted as-is rather than filtered out. A few exact
 zero readings also appear (4 Nitrate, 1 TP, 1 Chlorophyll-a, 2 Secchi)
 without a `Below MDL` flag; also kept as-is. Flag to Ray if these should be
 corrected upstream.
+
+Of that group, only the South Lake Leelanau 2020-09-20 reading of 6250
+µg/L stands apart from its own series: it is 5x the next-highest Nitrate
+value in the entire record and 50x the median, and it drags that year's
+published average from ~115 to 1649. The rest (850-1199 µg/L) sit 7-10x
+the median, which is an ordinary tail for a 35-year record — and three of
+them fall on the same two days of early March 1994 across three different
+lakes, which reads as a real regional event rather than a transcription
+slip. **Open question for Ray: is 2020-09-20 really 6250, or 625?**
+
+## Outlier flagging
+
+`ingest_measured_samples.py` marks samples that sit far outside their own
+series and writes a second summary alongside the plain one, so the site can
+show a year with or without them (`MaxExOutliers`, `MinExOutliers`,
+`AvgExOutliers`, `CountExOutliers`, `OutliersRemoved`). Nothing is deleted:
+the plain columns still cover every sample, and the site includes them by
+default.
+
+The rule is Tukey's fence on log10 values, `Q3 + 3 x IQR`, computed per
+(site, parameter) series across all its years. Three choices worth
+recording, because each of the obvious alternatives is worse on this data:
+
+- **Log scale, not raw.** Nutrient concentrations are right-skewed. A raw
+  fence flags ordinary late-summer phosphorus on a clear lake (12-18 µg/L
+  against a median of 4) and, on Big Glen, would cut a Nitrate year's
+  average from 49.6 to 2.0 — discarding seasonal signal, not errors.
+- **The outer multiplier (3.0), not the usual 1.5.** At 1.5 the rule flags
+  58 samples including legitimate spring Nitrate peaks; at 3.0 it flags 6.
+- **Per series, not global.** Lakes differ in baseline — Cedar's median
+  Nitrate is roughly 3x South Lake Leelanau's — so one shared fence would
+  systematically flag the naturally richer lake.
+
+**Secchi Depth is deliberately never flagged.** It measures clarity, not
+concentration: its high tail is the clearest days on record (North Lake
+Leelanau's best-ever 41 ft reading), so an upper fence would throw away the
+best data as though it were error. Nothing in the record suggests a Secchi
+transcription problem worth detecting, and inventing a rule for one would
+be speculative.
+
+At k=3.0 this currently flags 6 samples out of 8149 (0.07%), affecting 6 of
+the 1007 published yearly rows: five Total Phosphorus spikes and the South
+Lake Leelanau Nitrate reading above. Simulated rows are never flagged —
+there are no samples underneath them to judge.
 
 ### Coverage limits
 

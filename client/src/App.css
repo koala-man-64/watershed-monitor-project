@@ -146,6 +146,50 @@ h1, h2, h3, h4,
   }
 }
 
+/* Outlier view switch above the two chart panels. flex:0 0 auto so it keeps
+   its height inside the scrolling .plots-container column. */
+.plots-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: var(--color-panel-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-sizing: border-box;
+}
+
+.outlier-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-primary);
+  font-size: var(--font-size-label);
+  cursor: pointer;
+}
+
+.outlier-toggle input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.outlier-toggle-help {
+  min-width: 0;
+  color: var(--color-secondary);
+  font-size: calc(12px * var(--font-scale));
+  line-height: 1.35;
+}
+
+@media (max-width: 640px) {
+  .plots-toolbar {
+    padding: 8px;
+  }
+}
+
 /* Main content uses a stable two-pane flex layout and stacks on mobile */
 .main {
   display: flex;
