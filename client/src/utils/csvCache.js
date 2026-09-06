@@ -1,9 +1,17 @@
 import { trackException } from "./telemetry";
 import { DEFAULT_DATA_REVALIDATE_AFTER_MS } from "../config/dataSources";
 
-// v4: NWMIWS_Site_Data.csv gained a Provenance column and real Platte Lake
-// phosphorus values; bump forces revalidation of cached copies.
-const CSV_CACHE_PREFIX = "nwmiws:csv-cache:v4:";
+// Bump this whenever NWMIWS_Site_Data.csv changes shape. A cached copy is
+// served without revalidating for a whole day (see isEntryFresh), so without a
+// bump a returning visitor keeps the old columns and any feature reading a new
+// one silently reports "nothing here" rather than failing visibly.
+//
+// v5: gained MaxExOutliers, MinExOutliers, AvgExOutliers, CountExOutliers and
+// OutliersRemoved. Missed on the first release of the outlier filter, which is
+// exactly the failure above: the toggle sat greyed out on charts that did have
+// flagged samples, because the cached CSV had no OutliersRemoved column.
+// v4: gained a Provenance column and real Platte Lake phosphorus values.
+const CSV_CACHE_PREFIX = "nwmiws:csv-cache:v5:";
 
 function cacheKeyFor(url) {
   return `${CSV_CACHE_PREFIX}${url}`;

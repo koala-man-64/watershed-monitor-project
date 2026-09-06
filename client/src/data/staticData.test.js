@@ -20,6 +20,11 @@ const PARAMETERS = [
   "Total Phosphorus",
 ];
 
+function readHeader(name) {
+  const text = fs.readFileSync(path.join(DATA_DIR, name), "utf8");
+  return text.split(/\r?\n/)[0].split(",");
+}
+
 describe("static data files", () => {
   const rows = readCsv("NWMIWS_Site_Data.csv");
   const locations = readCsv("locations.csv");
@@ -92,6 +97,33 @@ describe("static data files", () => {
     expect(forRealSites.length).toBeGreaterThan(0);
     expect(forRealSites.every((row) => row.Provenance === "measured")).toBe(true);
     expect(forOtherSites.every((row) => row.Provenance === "simulated")).toBe(true);
+  });
+
+  it("has the exact column set the cache version was bumped for", () => {
+    // This assertion exists to fail loudly when a column is added or renamed.
+    // A cached CSV is served for a whole day without revalidating, so a shape
+    // change needs CSV_CACHE_PREFIX in utils/csvCache.js bumped in the same
+    // change - otherwise returning visitors keep the old columns and whatever
+    // reads a new one reports "nothing here" instead of breaking visibly.
+    // That is exactly how the outlier toggle shipped greyed out.
+    //
+    // If this test fails: update the list, then bump CSV_CACHE_PREFIX.
+    expect(readHeader("NWMIWS_Site_Data.csv")).toEqual([
+      "Site",
+      "SiteType",
+      "Year",
+      "Parameter",
+      "Max",
+      "Min",
+      "Avg",
+      "Count",
+      "MaxExOutliers",
+      "MinExOutliers",
+      "AvgExOutliers",
+      "CountExOutliers",
+      "OutliersRemoved",
+      "Provenance",
+    ]);
   });
 
   it("carries an outlier-free summary on every row", () => {
