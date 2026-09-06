@@ -926,6 +926,30 @@ h1, h2, h3, h4,
   color: var(--color-accent);
 }
 
+/* Engaged state for the toggles in the plot header (outliers, counts). The
+   colour rule has to sit on the svg: `.plot-icons svg` above sets its colour
+   directly, so anything set on the wrapping span is never inherited. */
+.plot-icons .plot-icon-active svg {
+  color: var(--color-accent);
+}
+
+/* Colour alone cannot carry the engaged state, because :hover above already
+   turns any icon accent-coloured - so while the pointer sits on the control,
+   which is exactly when it is being used, on and off look identical. The tint
+   behind the glyph is the part hover does not touch. --color-accent at 12%. */
+.plot-icons .plot-icon-active {
+  background: rgba(201, 76, 76, 0.12);
+  border-radius: 6px;
+}
+
+/* Nothing to toggle - no hover affordance, and the pointer cursor from
+   `.plot-icons svg` would otherwise still invite a click. */
+.plot-icons .plot-icon-disabled svg,
+.plot-icons .plot-icon-disabled svg:hover {
+  color: var(--color-secondary);
+  cursor: not-allowed;
+}
+
 /* Chart area fills the panel */
 .plot-content {
   flex: 1;
